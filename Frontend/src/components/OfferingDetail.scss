@@ -1,0 +1,467 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/colors' as *;
+
+.offering-detail {
+  min-height: 100vh;
+  background-color: $layer-01;
+
+  &__container {
+    padding: $spacing-06;
+  }
+
+  &__back-button {
+    margin-bottom: $spacing-05;
+  }
+
+  &__header {
+    background-color: $layer-02;
+    padding: $spacing-06;
+    margin-bottom: $spacing-06;
+    border-left: 4px solid $blue-60;
+  }
+
+  &__header-content {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-05;
+
+    @media (min-width: 1056px) {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+  }
+
+  &__title-section {
+    flex: 1;
+  }
+
+  &__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: $spacing-03;
+    color: $text-primary;
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-03;
+    margin-bottom: $spacing-05;
+  }
+
+  &__price-cards {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-05;
+
+    @media (min-width: 672px) {
+      flex-direction: row;
+    }
+  }
+
+  &__price-tile {
+    background-color: $layer-01;
+    padding: $spacing-05;
+    border-left: 2px solid $blue-60;
+
+    &--selected {
+      border-left-color: $green-60;
+    }
+
+    &--green-border {
+      border-left-color: $green-60;
+    }
+  }
+
+  &__price-content {
+    display: flex;
+    align-items: center;
+    gap: $spacing-04;
+  }
+
+  &__price-label {
+    color: $text-secondary;
+    font-size: 0.875rem;
+  }
+
+  &__price-value {
+    color: $text-primary;
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  &__icon--blue {
+    color: $blue-60;
+  }
+
+  &__icon--green {
+    color: $green-60;
+  }
+
+  &__tab-content {
+    padding: $spacing-06;
+  }
+
+  &__section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $spacing-06;
+  }
+
+  &__section-title {
+    display: flex;
+    align-items: center;
+    gap: $spacing-04;
+    margin-bottom: $spacing-06;
+
+    h2, h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0;
+    }
+  }
+
+  &__dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: $spacing-05;
+    margin-bottom: $spacing-06;
+
+    @media (min-width: 672px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (min-width: 1056px) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    &--four {
+      @media (min-width: 1056px) {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+  }
+
+  &__stat-tile {
+    padding: $spacing-05;
+    border-left: 4px solid;
+
+    &--blue {
+      border-left-color: $blue-60;
+    }
+
+    &--green {
+      border-left-color: $green-60;
+    }
+
+    &--purple {
+      border-left-color: $purple-60;
+    }
+
+    &--red {
+      border-left-color: $red-60;
+    }
+  }
+
+  &__stat-label {
+    color: $text-secondary;
+    font-size: 0.875rem;
+    margin-bottom: $spacing-02;
+  }
+
+  &__stat-value {
+    color: $text-primary;
+    font-size: 2rem;
+    font-weight: 600;
+  }
+
+  &__selected-section,
+  &__breakdown-section {
+    margin-top: $spacing-06;
+
+    h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: $spacing-05;
+    }
+  }
+
+  &__offering-cards {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-04;
+  }
+
+  &__offering-card {
+    padding: $spacing-05;
+    transition: box-shadow 0.2s;
+
+    &:hover {
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+  }
+
+  &__offering-card-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__offering-name {
+    color: $text-primary;
+    font-weight: 600;
+    margin-bottom: $spacing-02;
+  }
+
+  &__product-name {
+    color: $text-secondary;
+    font-size: 0.875rem;
+  }
+
+  &__offering-price {
+    color: $text-primary;
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  &__offering-price-detail {
+    text-align: right;
+  }
+
+  &__percentage {
+    color: $text-secondary;
+    font-size: 0.875rem;
+  }
+
+  &__section {
+    margin-bottom: $spacing-07;
+  }
+
+  &__staffing-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: $spacing-06;
+
+    @media (min-width: 672px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  &__staff-tile {
+    padding: $spacing-06;
+    border-left: 4px solid $blue-60;
+  }
+
+  &__staff-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: $spacing-05;
+  }
+
+  &__staff-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: $spacing-02;
+  }
+
+  &__staff-activities {
+    color: $text-secondary;
+    font-size: 0.875rem;
+  }
+
+  &__staff-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: $spacing-05;
+  }
+
+  &__staff-stat-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: $text-primary;
+  }
+
+  &__phase-tile {
+    padding: $spacing-06;
+    border-left: 4px solid;
+
+    &--blue {
+      border-left-color: $blue-60;
+    }
+
+    &--purple {
+      border-left-color: $purple-60;
+    }
+
+    &--green {
+      border-left-color: $green-60;
+    }
+  }
+
+  &__phase-tag {
+    margin-bottom: $spacing-04;
+  }
+
+  &__phase-price {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: $spacing-02;
+  }
+
+  &__phase-percentage {
+    color: $text-secondary;
+    font-size: 0.875rem;
+    margin-bottom: $spacing-04;
+  }
+
+  &__phase-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: $spacing-03;
+    padding-top: $spacing-04;
+    border-top: 1px solid $border-subtle;
+  }
+
+  &__phase-stat-label {
+    color: $text-secondary;
+    font-size: 0.75rem;
+  }
+
+  &__phase-stat-value {
+    color: $text-primary;
+    font-weight: 600;
+  }
+
+  &__modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-05;
+  }
+
+  &__modal-section {
+    padding: $spacing-04;
+    background-color: $layer-01;
+    border-radius: 4px;
+
+    h4 {
+      font-weight: 600;
+      color: $text-primary;
+      margin-bottom: $spacing-03;
+    }
+
+    p {
+      color: $text-secondary;
+      font-size: 0.875rem;
+      margin: 0;
+    }
+  }
+
+  &__link {
+    color: $link-primary;
+    text-decoration: underline;
+
+    &:hover {
+      color: $link-primary-hover;
+    }
+  }
+
+  // Table styling
+  .outcome-cell {
+    font-style: italic;
+    color: $text-secondary;
+  }
+
+  .price-cell {
+    font-weight: 600;
+  }
+
+  .selected-row {
+    background-color: $layer-selected-01;
+  }
+
+  .total-row {
+    background-color: $layer-accent-01;
+    font-weight: 600;
+  }
+
+  .selected-total-row {
+    background-color: $layer-selected-01;
+    border-top: 2px solid $border-interactive;
+    font-weight: 600;
+    color: $text-primary;
+  }
+
+  // Fine Print Tab Styles
+  &__fine-print-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+
+  &__fine-print-section {
+    padding: 1.5rem;
+    background: white;
+    
+    p {
+      margin: 0;
+    }
+  }
+
+  &__fine-print-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    
+    h3 {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+  }
+
+  &__fine-print-text {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #525252;
+  }
+
+  &__fine-print-footer {
+    margin-top: 1rem;
+  }
+
+  &__info-tile {
+    padding: 1.5rem;
+    background: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  &__info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__info-label {
+    font-weight: 600;
+    color: #161616;
+  }
+
+  &__icon {
+    &--orange {
+      color: #ff832b;
+    }
+  }
+
+}

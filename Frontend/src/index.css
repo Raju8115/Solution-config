@@ -1,0 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* index.css */
+/* Optional: reset button styles that Tailwind sometimes overrides */
+
+
+/* Optional: make sure Carbon tab text is visible */
+
+
+/* Body background just for clarity */
+
