@@ -1,0 +1,223 @@
+---
+# Pre-Production Environment Application Configuration
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: solution-configurator-backend-preprod
+  namespace: solution-configurator-preprod
+  labels:
+    app: solution-configurator
+    component: backend
+    environment: pre-production
+
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: solution-configurator
+      component: backend
+      environment: pre-production
+  
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  template:
+    metadata:
+      labels:
+        app: solution-configurator
+        component: backend
+        environment: pre-production
+    
+    spec:
+      containers:
+      - name: solution-configurator-backend
+        image: ${REGISTRY_URL}/solution-configurator-backend:${IMAGE_TAG}
+        ports:
+        - containerPort: 8000
+          name: http
+        
+        env:
+        - name: ENVIRONMENT
+          value: "pre-production"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials-preprod
+              key: url
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets-preprod
+              key: secret-key
+        - name: DEBUG
+          value: "false"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: CORS_ORIGINS
+          value: "https://preprod.solution-configurator.com"
+        - name: IBM_AUTH_ENABLED
+          value: "true"
+        - name: IBM_AUTH_URL
+          valueFrom:
+            configMapKeyRef:
+              name: solution-configurator-config-preprod
+              key: ibm_auth_url
+        
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+        - name: logs-volume
+          mountPath: /app/logs
+      
+      volumes:
+      - name: config-volume
+        configMap:
+          name: solution-configurator-config-preprod
+      - name: logs-volume
+        emptyDir: {}
+      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - solution-configurator
+              topologyKey: kubernetes.io/hostname
+
+---
+# Service for Pre-Production Environment
+apiVersion: v1
+kind: Service
+metadata:
+  name: solution-configurator-backend-service-preprod
+  namespace: solution-configurator-preprod
+  labels:
+    app: solution-configurator
+    component: backend
+    environment: pre-production
+
+spec:
+  selector:
+    app: solution-configurator
+    component: backend
+    environment: pre-production
+  
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  
+  type: ClusterIP
+  sessionAffinity: ClientIP
+
+---
+# ConfigMap for Pre-Production Environment
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: solution-configurator-config-preprod
+  namespace: solution-configurator-preprod
+  labels:
+    app: solution-configurator
+    component: backend
+    environment: pre-production
+
+data:
+  app.properties: |
+    # Pre-Production Environment Configuration
+    environment=pre-production
+    debug=false
+    log_level=INFO
+    
+    # Database Configuration
+    database_pool_size=10
+    database_timeout=60
+    database_max_overflow=5
+    
+    # API Configuration
+    api_rate_limit=5000
+    api_timeout=60
+    api_max_retries=3
+    
+    # Feature Flags
+    enable_debug_endpoints=false
+    enable_metrics=true
+    enable_tracing=true
+    enable_caching=true
+    
+    # Security
+    enable_ssl=true
+    enable_cors=true
+    
+  ibm_auth_url: "https://preprod-auth.ibm.com"
+
+---
+# HorizontalPodAutoscaler for Pre-Production
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: solution-configurator-backend-hpa-preprod
+  namespace: solution-configurator-preprod
+  labels:
+    app: solution-configurator
+    component: backend
+    environment: pre-production
+
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: solution-configurator-backend-preprod
+  
+  minReplicas: 2
+  maxReplicas: 5
+  
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

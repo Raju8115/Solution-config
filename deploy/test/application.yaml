@@ -1,0 +1,144 @@
+---
+# Test Environment Application Configuration
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: solution-configurator-backend-test
+  namespace: solution-configurator-test
+  labels:
+    app: solution-configurator
+    component: backend
+    environment: test
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: solution-configurator
+      component: backend
+      environment: test
+  
+  template:
+    metadata:
+      labels:
+        app: solution-configurator
+        component: backend
+        environment: test
+    
+    spec:
+      containers:
+      - name: solution-configurator-backend
+        image: ${REGISTRY_URL}/solution-configurator-backend:${IMAGE_TAG}
+        ports:
+        - containerPort: 8000
+          name: http
+        
+        env:
+        - name: ENVIRONMENT
+          value: "test"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials-test
+              key: url
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets-test
+              key: secret-key
+        - name: DEBUG
+          value: "true"
+        - name: LOG_LEVEL
+          value: "DEBUG"
+        - name: CORS_ORIGINS
+          value: "http://localhost:3000,https://test.solution-configurator.com"
+        
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+      
+      volumes:
+      - name: config-volume
+        configMap:
+          name: solution-configurator-config-test
+
+---
+# Service for Test Environment
+apiVersion: v1
+kind: Service
+metadata:
+  name: solution-configurator-backend-service-test
+  namespace: solution-configurator-test
+  labels:
+    app: solution-configurator
+    component: backend
+    environment: test
+
+spec:
+  selector:
+    app: solution-configurator
+    component: backend
+    environment: test
+  
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  
+  type: ClusterIP
+
+---
+# ConfigMap for Test Environment
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: solution-configurator-config-test
+  namespace: solution-configurator-test
+  labels:
+    app: solution-configurator
+    component: backend
+    environment: test
+
+data:
+  app.properties: |
+    # Test Environment Configuration
+    environment=test
+    debug=true
+    log_level=DEBUG
+    
+    # Database Configuration
+    database_pool_size=5
+    database_timeout=30
+    
+    # API Configuration
+    api_rate_limit=1000
+    api_timeout=30
+    
+    # Feature Flags
+    enable_debug_endpoints=true
+    enable_metrics=true
+    enable_tracing=true
