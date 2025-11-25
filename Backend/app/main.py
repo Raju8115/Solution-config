@@ -6,6 +6,8 @@ from app.config import settings
 from app.api.v1.api import api_router
 import logging
 from fastapi.responses import FileResponse
+import os
+
 
 # Configure logging
 logging.basicConfig(
