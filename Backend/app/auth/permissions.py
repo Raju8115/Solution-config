@@ -79,7 +79,7 @@ async def get_user_roles(current_user: dict = Depends(get_current_active_user)):
     
     # is_admin = is_user_in_group(email, ADMIN_GROUP)
     is_admin = True
-    # is_solution_architect = is_admin or is_user_in_group(email, SOLUTION_ARCHITECT_GROUP)
+    is_solution_architect = is_admin or is_user_in_group(email, SOLUTION_ARCHITECT_GROUP)
     
     
 
