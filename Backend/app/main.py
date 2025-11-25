@@ -5,6 +5,7 @@ from authlib.integrations.starlette_client import OAuth
 from app.config import settings
 from app.api.v1.api import api_router
 import logging
+from fastapi.responses import FileResponse
 
 # Configure logging
 logging.basicConfig(
