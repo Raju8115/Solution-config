@@ -29,7 +29,7 @@ app.add_middleware(
     session_cookie="session",
     max_age=3600,  # Session expires in 1 hour
     same_site="lax",  # "lax" works better for OAuth redirects
-    https_only=True,  # Keep False for development
+    https_only=False,  # Keep False for development
     domain=None,  # Let browser handle domain
 )
 
