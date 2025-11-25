@@ -61,6 +61,8 @@ oauth.register(
 # Include API router
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
+from fastapi.staticfiles import StaticFiles
+app.mount("/", StaticFiles(directory="frontend/build", html=True), name="frontend")
 
 @app.on_event("startup")
 async def startup_event():
@@ -70,6 +72,8 @@ async def startup_event():
     logger.info(f"Client ID: {settings.IBM_CLIENT_ID}")
     logger.info(f"Discovery Endpoint: {settings.IBM_DISCOVERY_ENDPOINT}")
     logger.info("=" * 80)
+
+
 
 
 @app.get("/")
