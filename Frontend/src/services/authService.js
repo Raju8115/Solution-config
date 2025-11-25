@@ -4,8 +4,6 @@ const API_URL = 'http://localhost:8000/api/v1';
 
 class AuthService {
   async login() {
-    // Redirect to backend login endpoint
-    // Backend will redirect to IBM AppID, then back to /auth/callback, then to frontend
     window.location.href = `${API_URL}/login`;
   }
 
@@ -17,11 +15,10 @@ class AuthService {
         { withCredentials: true }
       );
       
-      // Clear local storage
       localStorage.removeItem('userRole');
+      localStorage.removeItem('userRoles'); // ✅ Clear roles
       
-      console.log(response.data)
-      // Redirect to AppID logout
+      console.log(response.data);
       if (response.data.logout_url) {
         window.location.href = response.data.logout_url;
       }
@@ -31,6 +28,7 @@ class AuthService {
     } catch (error) {
       console.error('Logout error:', error);
       localStorage.removeItem('userRole');
+      localStorage.removeItem('userRoles');
       window.location.href = '/login';
     }
   }
@@ -47,12 +45,26 @@ class AuthService {
     }
   }
 
+  // ✅ NEW: Get user with roles from BlueGroups
+  async getUserWithRoles() {
+    try {
+      const response = await axios.get(`${API_URL}/me`, {
+        withCredentials: true
+      });
+      // console.log("getUser with roles ",response.data)
+      return response.data; // { user: {...}, roles: {...} }
+    } catch (error) {
+      console.error('Get user with roles error:', error);
+      throw error;
+    }
+  }
+
   async checkAuth() {
     try {
       const response = await axios.get(`${API_URL}/check`, {
         withCredentials: true
       });
-      console.log("Response : ", response.data)
+      console.log("Response : ", response.data);
       return response.data;
     } catch (error) {
       console.error('Check auth error:', error);

@@ -27,19 +27,22 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SESSION_SECRET,
     session_cookie="session",
-    max_age=3600 * 24,  # 24 hours
-    same_site="lax",
-    https_only=False  # Set to True in production with HTTPS
+    max_age=3600,  # Session expires in 1 hour
+    same_site="lax",  # "lax" works better for OAuth redirects
+    https_only=False,  # Keep False for development
+    domain=None,  # Let browser handle domain
 )
 
 # Configure CORS - IMPORTANT: Must allow credentials for sessions
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL],
-    allow_credentials=True,  # Required for cookies/sessions
+    allow_origins=[
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000"
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"]
 )
 
 # Configure OAuth with Authlib
@@ -76,6 +79,12 @@ async def root():
         "docs": "/docs"
     }
 
+@app.get("/debug")
+async def debug(request: Request):
+    return {
+        "cookies_sent": request.cookies,
+        "session": request.session
+    }
 
 @app.get("/health")
 async def health_check():

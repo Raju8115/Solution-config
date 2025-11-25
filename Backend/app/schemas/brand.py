@@ -12,6 +12,12 @@ class BrandCreate(BrandBase):
     pass
 
 
+class BrandUpdate(BaseModel):
+    """All fields optional for partial updates"""
+    brand_name: Optional[str] = None
+    description: Optional[str] = None
+
+
 class Brand(BrandBase):
     brand_id: UUID
 

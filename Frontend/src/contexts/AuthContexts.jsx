@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useContext } from "react";
+import { createContext, useState, useEffect, useContext, useRef } from "react";
 import axios from "axios";
 import authService from "../services/authService";
 
@@ -6,58 +6,23 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [userRole, setUserRole] = useState("seller");
-  const [userProfile, setUserProfile] = useState(null); // ✅ Added state for user profile
+  const [userRoles, setUserRoles] = useState({
+    is_admin: false,
+    is_solution_architect: false,
+    has_catalog_access: true
+  });
+  const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const loginAttempted = useRef(false);
 
   useEffect(() => {
-    checkAuthAndLoadRole();
+    setTimeout(() => {
+      checkAuthAndLoadRole();
+    }, 200); // 200ms delay to allow cookie to settle
   }, []);
 
-  // ✅ Combined function: authenticate and fetch IBM W3 role
-  const checkAuthAndLoadRole = async () => {
-    try {
-      const authStatus = await authService.checkAuth();
-      if (authStatus.authenticated) {
-        const userData = await authService.getCurrentUser();
-        setUser(userData);
 
-        // Get W3ID (use email from backend user info)
-        const w3id = userData.email;
-        if (w3id) {
-          // ✅ Fetch user profile
-          const profile = await fetchUserProfile(w3id);
-          // console.log(profile)
-          if (profile) {
-            setUserProfile(profile);
-          }
-
-          // ✅ Fetch user role
-          let role = await fetchUserRoleFromW3(w3id);
-          if (role) {
-            // ***************************CHANGE ON PRODUCTION***********************************
-            role = "solution-architect";
-            // normalize role format
-            const normalizedRole = normalizeRole(role);
-            setUserRole(normalizedRole);
-            localStorage.setItem("userRole", normalizedRole);
-          }
-        }
-      } else {
-        // Not authenticated
-        setUser(null);
-        setUserRole("seller");
-        setUserProfile(null);
-      }
-    } catch (error) {
-      console.error("Auth or role fetch failed:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ✅ Fixed: async typo and return value
-  const fetchUserProfile = async (w3id) => {
+    const fetchUserProfile = async (w3id) => {
     try {
       const res = await axios.get(
         `https://w3-unified-profile-api.ibm.com/v3/profiles/${w3id}/profile`,
@@ -68,66 +33,78 @@ export const AuthProvider = ({ children }) => {
         }
       );
       
-      // console.log("✅ User Profile Data:", res.data);
-      
-      // ✅ Extract and return relevant user details
       const profileData = {
         w3id: w3id,
         name: res.data?.content?.nameDisplay || "",
         email: res.data?.key || w3id,
-        // jobTitle: res.data?.content?.jobTitle || "",
-        // businessTitle: res.data?.content?.businessTitle || "",
-        // department: res.data?.content?.department || "",
         location: res.data?.content?.address?.business?.location || "",
         phoneNumber: res.data?.content?.telephone?.mobile || "",
         joiningDate: res.data?.content?.startDate || "",
-        // manager: res.data?.content?.managerName || "",
-        // division: res.data?.content?.division || "",
-        // country: res.data?.content?.country || "",
-        // Add any other fields you need
       };
 
       return profileData;
     } catch (err) {
       console.error("Failed to fetch IBM W3 profile:", err);
-      return null; // ✅ Fixed: null instead of None
+      return null;
     }
   };
 
-  // ✅ Fetch role from IBM Unified Profile API
-  const fetchUserRoleFromW3 = async (w3id) => {
-    try {
-      const res = await axios.get(
-        `https://w3-unified-profile-api.ibm.com/v3/profiles/${w3id}/profile_extended`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+const checkAuthAndLoadRole = async () => {
+  try {
+    // ✅ Add small delay to ensure cookie is set
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const authStatus = await authService.checkAuth();
+    console.log("Auth status:", authStatus);
 
-      // Example: extract job info from API response
-      const jobData = res.data?.content?.jobRoles?.[0] || {};
-      const role =
-        jobData.employeeType ||
-        jobData.jobRole ||
-        jobData.businessTitle ||
-        "seller"; // fallback
-      console.log("✅ Raw IBM W3 Role:", role);
-      return role;
-    } catch (err) {
-      console.error("Failed to fetch IBM W3 role:", err);
-      return "seller"; // fallback
+    if (authStatus?.authenticated) {
+      const { user: userData, roles } = await authService.getUserWithRoles();
+      
+      setUser(userData);
+      setUserRoles(roles);
+
+      const profile = await fetchUserProfile(userData.email);
+      if (profile) setUserProfile(profile);
+
+      return;
     }
-  };
 
-  // ✅ Normalize role string (convert to lowercase, replace spaces with "-")
-  const normalizeRole = (role) => {
-    if (!role) return "seller";
-    return role.trim().toLowerCase().replace(/\s+/g, "-");
-  };
+    // Not authenticated
+    setUser(null);
+    setUserProfile(null);
 
-  // ✅ Login / Logout
+    // ✅ Check if we're returning from OAuth callback
+    const isCallback = window.location.pathname.includes('/catalog') && 
+                      !loginAttempted.current;
+
+    if (isCallback) {
+      console.log("⚠️ Just returned from callback but not authenticated - retrying...");
+      // Wait a bit longer for session to settle
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const retryAuth = await authService.checkAuth();
+      if (retryAuth?.authenticated) {
+        const { user: userData, roles } = await authService.getUserWithRoles();
+        setUser(userData);
+        setUserRoles(roles);
+        return;
+      }
+    }
+
+    // Trigger login only once
+    if (!loginAttempted.current) {
+      loginAttempted.current = true;
+      console.log("Triggering login...");
+      setTimeout(() => authService.login(), 400);
+    }
+  } catch (error) {
+    console.error("Auth check failed:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
   const login = async () => {
     await authService.login();
   };
@@ -135,27 +112,27 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     await authService.logout();
     setUser(null);
-    setUserRole("seller");
-    setUserProfile(null); // ✅ Clear user profile on logout
-    localStorage.removeItem("userRole");
-  };
-
-  const changeRole = (newRole) => {
-    const normalizedRole = normalizeRole(newRole);
-    setUserRole(normalizedRole);
-    localStorage.setItem("userRole", normalizedRole);
+    setUserRoles({
+      is_admin: false,
+      is_solution_architect: false,
+      has_catalog_access: true
+    });
+    setUserProfile(null);
+    localStorage.removeItem("userRoles");
   };
 
   const value = {
     user,
-    userRole,
-    userProfile, // ✅ Expose user profile
+    userRoles, // ✅ BlueGroup-based roles from backend
+    userProfile,
     loading,
     isAuthenticated: !!user,
+    isAdmin: userRoles.is_admin,
+    isSolutionArchitect: userRoles.is_solution_architect,
+    hasCatalogAccess: userRoles.has_catalog_access,
     login,
     logout,
-    changeRole,
-    fetchUserProfile, // ✅ Expose function if needed elsewhere
+    fetchUserProfile,
   };
 
   return (

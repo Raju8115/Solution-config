@@ -6,6 +6,8 @@ from uuid import UUID
 
 class ActivityBase(BaseModel):
     activity_name: str
+    brand: Optional[str] = None
+    product_name: Optional[str] = None
     category: Optional[str] = None
     part_numbers: Optional[str] = None
     duration_weeks: Optional[int] = None
@@ -29,6 +31,8 @@ class ActivityCreate(ActivityBase):
 class ActivityUpdate(BaseModel):
     """Schema for updating an activity (all fields optional)"""
     activity_name: Optional[str] = None
+    brand: Optional[str] = None
+    product_name: Optional[str] = None
     category: Optional[str] = None
     part_numbers: Optional[str] = None
     duration_weeks: Optional[int] = None

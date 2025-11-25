@@ -24,9 +24,9 @@ import {
   Percentage,
   ShoppingCart,
   Copy,
-  Tag as TagIcon,  // Add this for Brand
-  Category,        // Add this for Product
-  Template,        // Add this for Offering
+  Tag as TagIcon,
+  Category,
+  Template,
   Enterprise,
   Catalog,
   ListBoxes
@@ -49,15 +49,17 @@ import {
   Loading,
 } from '@carbon/react';
 import { useAuth } from '../contexts/AuthContexts';
+import { usePermissions } from '../hooks/usePermissions';
 import countryService from '../services/countryService';
 import offeringService from '../services/offeringService';
 import activityService from '../services/activityService';
 import staffingService from '../services/staffingService';
 import pricingService from '../services/pricingService';
+import productService from '../services/productService';
 
 // Helper function to get rate from pricing data
 const getRate = (pricingData, country, role, band) => {
-  if (!pricingData || pricingData.length === 0) return 100; // Default rate
+  if (!pricingData || pricingData.length === 0) return 100;
   
   const pricing = pricingData.find(p => 
     p.country === country && 
@@ -69,7 +71,8 @@ const getRate = (pricingData, country, role, band) => {
 };
 
 export function SolutionBuilder() {
-  const { userRole } = useAuth();
+  const { userRoles, userProfile } = useAuth();
+  const permissions = usePermissions();
 
   // Data state
   const [countries, setCountries] = useState([]);
@@ -88,6 +91,7 @@ export function SolutionBuilder() {
 
   // Error states
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   // Selection state
   const [selectedCountry, setSelectedCountry] = useState('');
@@ -108,13 +112,25 @@ export function SolutionBuilder() {
   const [reviewingActivity, setReviewingActivity] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
 
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [activityToDelete, setActivityToDelete] = useState(null);
+
   // Export modal state
   const [isBPEModalOpen, setIsBPEModalOpen] = useState(false);
   const [isWBSModalOpen, setIsWBSModalOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  
 
   // Drag and drop state
   const [draggedIndex, setDraggedIndex] = useState(null);
+
+  // Auto-dismiss success messages
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
 
   // Fetch countries on mount
   useEffect(() => {
@@ -189,7 +205,7 @@ export function SolutionBuilder() {
     try {
       setLoadingProducts(true);
       setError(null);
-      const data = await offeringService.getProducts(brandId);
+      const data = await productService.getProductsByBrand(brandId);
       const formattedProducts = data.map(p => ({
         id: p.product_id,
         name: p.product_name,
@@ -214,7 +230,7 @@ export function SolutionBuilder() {
         name: o.offering_name,
         productId: productId,
         duration: parseDuration(o.duration),
-        price: 0, // Will be calculated from activities
+        price: 0,
         rawData: o
       }));
       setOfferings(formattedOfferings);
@@ -231,28 +247,13 @@ export function SolutionBuilder() {
       setLoadingActivities(true);
       setError(null);
       
-      // Fetch activities
       const activitiesData = await activityService.getActivitiesByOffering(offeringId);
-      
-      // Fetch staffing for the offering
       const staffingData = await staffingService.getStaffingByOffering(offeringId);
       
-      // Fetch pricing data (get all unique combinations)
-      const uniquePricingKeys = new Set();
-      staffingData.forEach(s => {
-        uniquePricingKeys.add(`${s.country}-${s.role}-${s.band}`);
-      });
-      
-      // For simplicity, we'll store all pricing data
-      // In a real scenario, you might want to optimize this
       setPricingData(staffingData);
       
-      // Format activities with staffing
       const formattedActivities = activitiesData.map(activity => {
-        // Get staffing for this activity
         const activityStaffing = staffingData.filter(s => s.activity_id === activity.activity_id);
-        
-        // Calculate hours and cost
         const hours = activityStaffing.reduce((sum, s) => sum + (s.hours || 0), 0);
         const cost = calculateActivityCost(activityStaffing);
         
@@ -276,18 +277,17 @@ export function SolutionBuilder() {
             hours: s.hours
           })),
           rawData: activity,
-          originalId: activity.activity_id // Keep track of original ID
+          originalId: activity.activity_id
         };
       });
       
       setAvailableActivities(formattedActivities);
       
-      // Auto-select first 3 activities
       if (formattedActivities.length > 0) {
         const first3 = formattedActivities.slice(0, 3).map((activity, index) => ({
           ...activity,
           id: `${activity.id}-${Date.now()}-${index}`,
-          originalId: activity.id, // Store the original ID
+          originalId: activity.id,
           order: index
         }));
         setSelectedActivities(first3);
@@ -301,57 +301,43 @@ export function SolutionBuilder() {
     }
   };
 
-  // Helper function to parse duration string (e.g., "12 weeks" -> 12)
   const parseDuration = (durationStr) => {
     if (!durationStr) return 0;
     const match = durationStr.match(/\d+/);
     return match ? parseInt(match[0]) : 0;
   };
 
-  // Helper function to calculate activity cost from staffing
   const calculateActivityCost = (staffing) => {
-    // This is a simplified calculation
-    // In reality, you'd fetch pricing for each role/band/country combination
     return staffing.reduce((sum, s) => {
-      const rate = 200; // Default rate, should come from pricing API
+      const rate = 200;
       return sum + ((s.hours || 0) * rate);
     }, 0);
   };
 
-  // Helper function to format responsibilities
   const formatResponsibilities = (activity) => {
     const ibm = activity.ibm_responsibilities || 'IBM responsibilities not specified';
     const client = activity.client_responsibilities || 'Client responsibilities not specified';
     return `IBM: ${ibm}\n\nClient: ${client}`;
   };
 
-  // Helper function to extract original activity ID
   const getOriginalActivityId = (activity) => {
-    // If activity has originalId property, use that
     if (activity.originalId !== undefined) {
       return String(activity.originalId);
     }
-    
-    // If ID is a string with timestamp (e.g., "1-123456-0"), extract the first part
     if (typeof activity.id === 'string' && activity.id.includes('-')) {
       return activity.id.split('-')[0];
     }
-    
-    // Otherwise, just return the ID as string
     return String(activity.id);
   };
 
-  // Helper function to check if activity is selected (at least once)
   const isActivitySelected = (activity) => {
     const activityOriginalId = getOriginalActivityId(activity);
-    
     return selectedActivities.some(selectedActivity => {
       const selectedOriginalId = getOriginalActivityId(selectedActivity);
       return selectedOriginalId === activityOriginalId;
     });
   };
 
-  // Filtered data
   const filteredProducts = selectedBrand 
     ? products.filter(p => p.brandId === selectedBrand)
     : [];
@@ -360,7 +346,6 @@ export function SolutionBuilder() {
     ? offerings.filter(o => o.productId === selectedProduct)
     : [];
   
-  // Filter and sort activities - selected ones first
   const filteredActivities = availableActivities
     .filter(activity =>
       activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -374,18 +359,15 @@ export function SolutionBuilder() {
       return 0;
     });
 
-  // Pagination calculations
   const totalPages = Math.ceil(filteredActivities.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedActivities = filteredActivities.slice(startIndex, endIndex);
 
-  // Reset to page 1 when search or offering changes
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, selectedOffering]);
 
-  // Reset cascading selections
   const handleCountryChange = ({ selectedItem }) => {
     setSelectedCountry(selectedItem?.id || '');
     setSelectedBrand('');
@@ -418,14 +400,12 @@ export function SolutionBuilder() {
     setSelectedActivities([]);
   };
 
-  // Open review modal when activity is clicked
   const openReviewModal = (activity) => {
     setReviewingActivity(activity);
     setActiveTab(0);
     setIsReviewModalOpen(true);
   };
 
-  // Add activity after review (allow duplicates)
   const addActivityAfterReview = () => {
     if (reviewingActivity) {
       setSelectedActivities([...selectedActivities, { 
@@ -436,14 +416,30 @@ export function SolutionBuilder() {
       }]);
       setIsReviewModalOpen(false);
       setReviewingActivity(null);
+      setSuccessMessage('Activity added to canvas successfully!');
     }
   };
 
-  const removeActivity = (id) => {
-    setSelectedActivities(selectedActivities.filter(a => a.id !== id));
-  };
+  const removeActivity = (activity) => {
+  setActivityToDelete(activity);
+  setIsDeleteConfirmOpen(true);
+};
 
-  // Drag and drop handlers
+const confirmRemoveActivity = () => {
+  if (activityToDelete) {
+    setSelectedActivities(selectedActivities.filter(a => a.id !== activityToDelete.id));
+    setSuccessMessage(`"${activityToDelete.name}" removed from canvas`);
+    setIsDeleteConfirmOpen(false);
+    setActivityToDelete(null);
+  }
+};
+
+
+const cancelRemoveActivity = () => {
+  setIsDeleteConfirmOpen(false);
+  setActivityToDelete(null);
+};
+
   const handleDragStart = (index) => {
     setDraggedIndex(index);
   };
@@ -466,7 +462,6 @@ export function SolutionBuilder() {
     setDraggedIndex(null);
   };
 
-  // Generate BP&E text
   const generateBPEText = () => {
     let text = 'BUDGET PLANNING & ESTIMATE\n\n';
     text += '='.repeat(80) + '\n\n';
@@ -487,7 +482,6 @@ export function SolutionBuilder() {
     text += '='.repeat(80) + '\n\n';
     text += 'BUDGET AND PLANNING ESTIMATED CHARGES:\n\n';
 
-    // Combine staffing across all activities
     const combinedStaffing = {};
     
     selectedActivities.forEach(activity => {
@@ -500,7 +494,7 @@ export function SolutionBuilder() {
               band: staff.band,
               country: staff.country,
               hours: 0,
-              rate: 200 // Default rate
+              rate: 200
             };
           }
           combinedStaffing[key].hours += staff.hours;
@@ -519,13 +513,12 @@ export function SolutionBuilder() {
     });
 
     text += '-'.repeat(80) + '\n';
-    text += `TOTAL CHARGES: ${grandTotal.toLocaleString()}\n`;
+    text += `TOTAL CHARGES: $${grandTotal.toLocaleString()}\n`;
     text += '='.repeat(80) + '\n';
 
     return text;
   };
 
-  // Generate WBS text
   const generateWBSText = () => {
     let text = 'WORK BREAKDOWN STRUCTURE\n\n';
     text += '='.repeat(80) + '\n\n';
@@ -552,7 +545,6 @@ export function SolutionBuilder() {
     text += '='.repeat(80) + '\n\n';
     text += 'TOTALS:\n\n';
 
-    // Combine staffing across all activities
     const combinedStaffing = {};
     
     selectedActivities.forEach(activity => {
@@ -585,7 +577,6 @@ export function SolutionBuilder() {
     return text;
   };
 
-  // Copy to clipboard
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text).then(() => {
       setCopySuccess(true);
@@ -593,7 +584,6 @@ export function SolutionBuilder() {
     });
   };
 
-  // Export functions
   const exportBPE = () => {
     setIsBPEModalOpen(true);
     setCopySuccess(false);
@@ -604,9 +594,6 @@ export function SolutionBuilder() {
     setCopySuccess(false);
   };
 
-  // console.log(selectedActivities)
-
-  // Calculate totals
   const totals = selectedActivities.reduce(
     (acc, activity) => ({
       weeks: acc.weeks + activity.duration,
@@ -616,16 +603,13 @@ export function SolutionBuilder() {
     { weeks: 0, hours: 0, cost: 0 }
   );
 
-  // Sales price is same as cost (no margin)
   const salesPrice = totals.cost;
 
-  // Get current selection names for display
   const selectedCountryName = countries.find(c => c.id === selectedCountry)?.name || '';
   const selectedBrandName = brands.find(b => b.id === selectedBrand)?.name || '';
   const selectedProductName = products.find(p => p.id === selectedProduct)?.name || '';
   const selectedOfferingName = offerings.find(o => o.id === selectedOffering)?.name || '';
 
-  // Show loading state
   if (loadingCountries) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -635,7 +619,7 @@ export function SolutionBuilder() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f4f4f4', paddingTop: '2rem'}}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f4f4f4', paddingTop: '3rem'}}>
       <div style={{ display: 'flex', height: '100vh' }}>
         {/* Left Panel - Selection Wizard + Summary */}
         <aside 
@@ -655,9 +639,16 @@ export function SolutionBuilder() {
               flexShrink: 0
             }}
           >
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>
-              Build Solution
-            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>
+                Build Solution
+              </h2>
+              {permissions.isAdmin ? (
+                <Tag type="red" size="sm">ADMIN</Tag>
+              ) : permissions.isSolutionArchitect ? (
+                <Tag type="blue" size="sm">ARCHITECT</Tag>
+              ) : null}
+            </div>
             <p style={{ fontSize: '0.875rem', color: '#525252' }}>
               Select country, brand, product, and offering
             </p>
@@ -671,6 +662,18 @@ export function SolutionBuilder() {
                 subtitle={error}
                 onCloseButtonClick={() => setError(null)}
                 lowContrast
+                style={{ marginBottom: '1rem' }}
+              />
+            )}
+
+            {successMessage && (
+              <InlineNotification
+                kind="success"
+                title="Success"
+                subtitle={successMessage}
+                onCloseButtonClick={() => setSuccessMessage(null)}
+                lowContrast
+                hideCloseButton={false}
                 style={{ marginBottom: '1rem' }}
               />
             )}
@@ -888,7 +891,7 @@ export function SolutionBuilder() {
                         <Currency size={16} style={{ color: '#da1e28' }} />
                         <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>Total Cost</span>
                       </div>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{totals.cost.toLocaleString()}</span>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>${totals.cost.toLocaleString()}</span>
                     </div>
                   </Tile>
                   <Tile 
@@ -903,7 +906,7 @@ export function SolutionBuilder() {
                         <ShoppingCart size={16} style={{ color: '#24a148' }} />
                         <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>Sales Price</span>
                       </div>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{salesPrice.toLocaleString()}</span>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>${salesPrice.toLocaleString()}</span>
                     </div>
                   </Tile>
                 </div>
@@ -1020,7 +1023,7 @@ export function SolutionBuilder() {
                                 <Currency size={16} />
                                 Cost
                               </span>
-                              <span style={{ fontWeight: 600 }}>{activity.cost.toLocaleString()}</span>
+                              <span style={{ fontWeight: 600 }}>${activity.cost.toLocaleString()}</span>
                             </div>
                           </div>
 
@@ -1095,7 +1098,7 @@ export function SolutionBuilder() {
                 </Tile>
               )}
 
-              {/* Solution Canvas Section - continues below... */}
+              {/* Solution Canvas Section */}
               <div 
                 style={{
                   borderTop: '4px solid #0f62fe',
@@ -1226,7 +1229,7 @@ export function SolutionBuilder() {
                               <div style={{ textAlign: 'center' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                   <Currency size={16} style={{ color: '#525252', marginBottom: '0.25rem' }} />
-                                  <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{activity.cost.toLocaleString()}</span>
+                                  <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>${activity.cost.toLocaleString()}</span>
                                 </div>
                               </div>
 
@@ -1235,7 +1238,7 @@ export function SolutionBuilder() {
                                 <Button
                                   kind="danger--ghost"
                                   size="sm"
-                                  onClick={() => removeActivity(activity.id)}
+                                  onClick={() => removeActivity(activity)}
                                   hasIconOnly
                                   renderIcon={TrashCan}
                                   iconDescription="Remove Activity"
@@ -1270,7 +1273,7 @@ export function SolutionBuilder() {
                             <span style={{ fontSize: '1rem', fontWeight: 700, color: '#0f62fe' }}>{totals.hours}h</span>
                           </div>
                           <div style={{ textAlign: 'center' }}>
-                            <span style={{ fontSize: '1rem', fontWeight: 700, color: '#0f62fe' }}>{totals.cost.toLocaleString()}</span>
+                            <span style={{ fontSize: '1rem', fontWeight: 700, color: '#0f62fe' }}>${totals.cost.toLocaleString()}</span>
                           </div>
                           <div></div>
                         </div>
@@ -1290,7 +1293,7 @@ export function SolutionBuilder() {
                               Total Cost
                             </div>
                             <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#da1e28' }}>
-                              {totals.cost.toLocaleString()}
+                              ${totals.cost.toLocaleString()}
                             </div>
                           </div>
                           <div style={{ textAlign: 'center' }}>
@@ -1298,7 +1301,7 @@ export function SolutionBuilder() {
                               Sales Price
                             </div>
                             <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#24a148' }}>
-                              {salesPrice.toLocaleString()}
+                              ${salesPrice.toLocaleString()}
                             </div>
                           </div>
                         </div>
@@ -1315,55 +1318,54 @@ export function SolutionBuilder() {
               </div>
             </div>
           ) : (
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem' }}>
-                <div style={{ textAlign: 'center', color: '#525252' }}>
-                  <div 
-                    style={{
-                      width: '6rem',
-                      height: '6rem',
-                      backgroundColor: '#e0e0e0',
-                      borderRadius: '50%',
-                      margin: '0 auto 1.5rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    {!selectedCountry ? (
-                      <EarthFilled size={64} style={{ color: '#0f62fe' }} />
-                    ) : !selectedBrand ? (
-                      <Enterprise size={64} style={{ color: '#0f62fe' }} />
-                    ) : !selectedProduct ? (
-                      <Catalog size={64} style={{ color: '#0f62fe' }} />
-                    ) : (
-                      <ListBoxes size={64} style={{ color: '#0f62fe' }} />
-                    )}
-                  </div>
-                  <p style={{ fontSize: '1.25rem', marginBottom: '0.5rem', fontWeight: 600 }}>
-                    {!selectedCountry 
-                      ? 'Start by selecting a country from the left panel'
-                      : !selectedBrand 
-                      ? 'Select a brand to continue'
-                      : !selectedProduct 
-                      ? 'Select a product to view available offerings'
-                      : 'Select an offering to view its activities'}
-                  </p>
-                  <p style={{ fontSize: '0.875rem', color: '#8d8d8d' }}>
-                    {!selectedCountry 
-                      ? 'Choose the country where your solution will be delivered'
-                      : !selectedBrand 
-                      ? 'Pick the brand that aligns with your solution'
-                      : !selectedProduct 
-                      ? 'Choose a product from the selected brand'
-                      : 'Pick an offering template to begin building your solution'}
-                  </p>
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem' }}>
+              <div style={{ textAlign: 'center', color: '#525252' }}>
+                <div 
+                  style={{
+                    width: '6rem',
+                    height: '6rem',
+                    backgroundColor: '#e0e0e0',
+                    borderRadius: '50%',
+                    margin: '0 auto 1.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  {!selectedCountry ? (
+                    <EarthFilled size={64} style={{ color: '#0f62fe' }} />
+                  ) : !selectedBrand ? (
+                    <Enterprise size={64} style={{ color: '#0f62fe' }} />
+                  ) : !selectedProduct ? (
+                    <Catalog size={64} style={{ color: '#0f62fe' }} />
+                  ) : (
+                    <ListBoxes size={64} style={{ color: '#0f62fe' }} />
+                  )}
                 </div>
+                <p style={{ fontSize: '1.25rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+                  {!selectedCountry 
+                    ? 'Start by selecting a country from the left panel'
+                    : !selectedBrand 
+                    ? 'Select a brand to continue'
+                    : !selectedProduct 
+                    ? 'Select a product to view available offerings'
+                    : 'Select an offering to view its activities'}
+                </p>
+                <p style={{ fontSize: '0.875rem', color: '#8d8d8d' }}>
+                  {!selectedCountry 
+                    ? 'Choose the country where your solution will be delivered'
+                    : !selectedBrand 
+                    ? 'Pick the brand that aligns with your solution'
+                    : !selectedProduct 
+                    ? 'Choose a product from the selected brand'
+                    : 'Pick an offering template to begin building your solution'}
+                </p>
               </div>
-            )}
+            </div>
+          )}
         </main>
       </div>
 
-      {/* Modals remain the same - Review Activity Modal, BP&E Modal, WBS Modal */}
       {/* Review Activity Modal with Tabs */}
       <Modal
         open={isReviewModalOpen}
@@ -1390,7 +1392,7 @@ export function SolutionBuilder() {
               </span>
               <span style={{ fontSize: '0.875rem', color: '#525252', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                 <Currency size={16} />
-                {reviewingActivity.cost.toLocaleString()}
+                ${reviewingActivity.cost.toLocaleString()}
               </span>
             </div>
 
@@ -1425,7 +1427,7 @@ export function SolutionBuilder() {
                         </Tile>
                         <Tile style={{ padding: '1rem', backgroundColor: '#f4f4f4' }}>
                           <div style={{ fontSize: '0.75rem', color: '#525252', marginBottom: '0.25rem' }}>Estimated Cost</div>
-                          <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{reviewingActivity.cost.toLocaleString()}</div>
+                          <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>${reviewingActivity.cost.toLocaleString()}</div>
                         </Tile>
                       </div>
                     </div>
@@ -1593,8 +1595,9 @@ export function SolutionBuilder() {
         modalHeading="Budget Planning & Estimate"
         passiveModal
         size="lg"
+        style={{ marginTop: '3rem'}}
       >
-        <div style={{ marginBottom: '1rem' }}>
+        <div style={{ marginBottom: '1rem'}}>
           {copySuccess && (
             <InlineNotification
               kind="success"
@@ -1634,6 +1637,7 @@ export function SolutionBuilder() {
         modalHeading="Work Breakdown Structure"
         passiveModal
         size="lg"
+        style={{ marginTop: '3rem'}}
       >
         <div style={{ marginBottom: '1rem' }}>
           {copySuccess && (
@@ -1666,6 +1670,43 @@ export function SolutionBuilder() {
             {generateWBSText()}
           </pre>
         </Tile>
+      </Modal>
+
+            {/* Delete Confirmation Modal */}
+      <Modal
+        open={isDeleteConfirmOpen}
+        onRequestClose={cancelRemoveActivity}
+        modalHeading="Remove Activity from Canvas?"
+        primaryButtonText="Remove"
+        secondaryButtonText="Cancel"
+        onRequestSubmit={confirmRemoveActivity}
+        onSecondarySubmit={cancelRemoveActivity}
+        danger
+        size="sm"
+      >
+        {activityToDelete && (
+          <div style={{ marginBottom: '1rem' }}>
+            <p style={{ marginBottom: '1rem' }}>
+              Are you sure you want to remove <strong>"{activityToDelete.name}"</strong> from your solution canvas?
+            </p>
+            
+            <Tile style={{ backgroundColor: '#fff1f1', padding: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                <WarningAlt size={20} style={{ color: '#da1e28', marginTop: '0.125rem', flexShrink: 0 }} />
+                <div>
+                  <p style={{ fontSize: '0.875rem', color: '#525252', marginBottom: '0.5rem' }}>
+                    This will remove the activity from your current solution. The activity will still be available in the activity library.
+                  </p>
+                  {/* <div style={{ fontSize: '0.75rem', color: '#8d8d8d' }}>
+                    <div>Duration: {activityToDelete.duration} weeks</div>
+                    <div>Hours: {activityToDelete.hours}h</div>
+                    <div>Cost: ${activityToDelete.cost.toLocaleString()}</div>
+                  </div> */}
+                </div>
+              </div>
+            </Tile>
+          </div>
+        )}
       </Modal>
     </div>
   );

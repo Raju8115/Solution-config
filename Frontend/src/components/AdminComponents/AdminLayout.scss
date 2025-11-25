@@ -1,0 +1,316 @@
+// ✅ Ensure proper layering - body/html should not interfere
+:global(body) {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+.admin-layout-container {
+  display: flex;
+  min-height: calc(100vh - 48px);
+  background-color: var(--cds-background);
+  padding-top: 48px; // ✅ Push content below fixed header
+  position: relative; // ✅ Create stacking context
+}
+
+// Side Navigation Styles
+.admin-sidenav {
+  position: fixed;
+  left: 0;
+  top: 48px; // Header height
+  height: calc(100vh - 48px);
+  z-index: 1000; // ✅ Much lower than header (9999)
+  background-color: var(--cds-layer-01);
+  border-right: 1px solid var(--cds-border-subtle-01);
+  transition: width 0.3s ease;
+  overflow-y: auto; // ✅ Allow scrolling if content is tall
+
+  &.expanded {
+    width: 256px;
+  }
+
+  &.collapsed {
+    width: 48px;
+    
+    // Hide text in collapsed state
+    :global(.cds--side-nav__link-text),
+    :global(.cds--side-nav__menu-title) {
+      display: none;
+    }
+  }
+
+  .sidenav-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--cds-border-subtle-01);
+    min-height: 64px;
+    background-color: var(--cds-layer-01);
+
+    .sidenav-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--cds-text-primary);
+      white-space: nowrap;
+    }
+  }
+
+  .sidenav-toggle {
+    position: sticky; // ✅ Changed from absolute to sticky
+    bottom: 0;
+    width: 100%;
+    padding: 0.5rem;
+    border-top: 1px solid var(--cds-border-subtle-01);
+    background-color: var(--cds-layer-01);
+    margin-top: auto;
+  }
+}
+
+// Main Content Area
+.admin-content {
+  flex: 1;
+  transition: margin-left 0.3s ease;
+  padding: 2rem;
+  min-height: calc(100vh - 48px);
+  width: 100%; // ✅ Ensure content takes full width
+
+  &.nav-expanded {
+    margin-left: 256px;
+  }
+
+  &.nav-collapsed {
+    margin-left: 48px;
+  }
+}
+
+// Dashboard Overview Styles
+.admin-dashboard-overview {
+  max-width: 1584px;
+  margin: 0 auto;
+
+  .dashboard-title {
+    font-size: 2.5rem;
+    font-weight: 300;
+    margin-bottom: 0.5rem;
+    color: var(--cds-text-primary);
+  }
+
+  .dashboard-subtitle {
+    font-size: 1rem;
+    color: var(--cds-text-secondary);
+    margin-bottom: 2rem;
+  }
+
+  .dashboard-grid {
+    gap: 1rem;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    margin-top: 2rem;
+    color: var(--cds-text-primary);
+  }
+}
+
+// Stats Tile Styles
+.stat-tile {
+  padding: 1.5rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+  border-left: 4px solid transparent;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  &--primary {
+    border-left-color: var(--cds-support-info);
+    
+    .stat-icon {
+      color: var(--cds-support-info);
+    }
+  }
+
+  &--secondary {
+    border-left-color: var(--cds-support-success);
+    
+    .stat-icon {
+      color: var(--cds-support-success);
+    }
+  }
+
+  &--tertiary {
+    border-left-color: var(--cds-support-warning);
+    
+    .stat-icon {
+      color: var(--cds-support-warning);
+    }
+  }
+
+  &--quaternary {
+    border-left-color: var(--cds-support-error);
+    
+    .stat-icon {
+      color: var(--cds-support-error);
+    }
+  }
+
+  &--config {
+    padding: 1rem;
+    
+    .stat-icon {
+      margin-bottom: 0.5rem;
+    }
+    
+    .stat-number {
+      font-size: 1.75rem !important;
+    }
+  }
+
+  .stat-icon {
+    color: var(--cds-text-secondary);
+    margin-bottom: 1rem;
+  }
+
+  .stat-content {
+    flex: 1;
+
+    .stat-number {
+      font-size: 2.5rem;
+      font-weight: 300;
+      color: var(--cds-text-primary);
+      margin-bottom: 0.25rem;
+      
+      &--small {
+        font-size: 1.75rem;
+      }
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: var(--cds-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  .stat-action {
+    margin-top: 1rem;
+    justify-content: flex-start;
+  }
+}
+
+// Skeleton Loading Styles
+.skeleton-icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 1rem;
+}
+
+.skeleton-number {
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-label {
+  margin-bottom: 1rem;
+}
+
+.skeleton-button-placeholder {
+  width: 80px;
+  height: 32px;
+}
+
+// Quick Actions Section
+.quick-actions-section {
+  margin-top: 2rem;
+}
+
+.action-tile {
+  padding: 1.5rem;
+  height: 100%;
+
+  h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--cds-text-primary);
+  }
+
+  p {
+    font-size: 0.875rem;
+    color: var(--cds-text-secondary);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+
+  .action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+}
+
+// Responsive Design
+@media (max-width: 1056px) {
+  .admin-sidenav {
+    &.expanded {
+      width: 200px;
+    }
+  }
+
+  .admin-content {
+    &.nav-expanded {
+      margin-left: 200px;
+    }
+  }
+}
+
+@media (max-width: 672px) {
+  .admin-layout-container {
+    padding-top: 48px;
+  }
+
+  .admin-sidenav {
+    // On mobile, collapsed by default
+    &.expanded {
+      width: 100%;
+      z-index: 1000; // Still below header
+    }
+    
+    &.collapsed {
+      width: 0;
+      border: none;
+    }
+  }
+
+  .admin-content {
+    padding: 1rem;
+    
+    &.nav-expanded {
+      margin-left: 0;
+    }
+    
+    &.nav-collapsed {
+      margin-left: 0;
+    }
+  }
+
+  .stat-tile {
+    .stat-number {
+      font-size: 2rem;
+    }
+  }
+
+  .admin-dashboard-overview {
+    .dashboard-title {
+      font-size: 1.75rem;
+    }
+  }
+}

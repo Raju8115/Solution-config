@@ -1,5 +1,6 @@
 from uuid import UUID
 from pydantic import BaseModel
+from typing import Optional
 
 
 class CountryBase(BaseModel):
@@ -8,6 +9,11 @@ class CountryBase(BaseModel):
 
 class CountryCreate(CountryBase):
     pass
+
+
+class CountryUpdate(BaseModel):
+    """All fields optional for partial updates"""
+    country_name: Optional[str] = None
 
 
 class Country(CountryBase):

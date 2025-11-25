@@ -8,7 +8,8 @@ from app.api.v1.endpoints import (
     activities,
     staffing,
     pricing,
-    wbs
+    wbs,
+    admin_stats
 )
 
 api_router = APIRouter()
@@ -25,3 +26,4 @@ api_router.include_router(activities.router, tags=["activities"])
 api_router.include_router(staffing.router, tags=["staffing"])
 api_router.include_router(pricing.router, tags=["pricing"])
 api_router.include_router(wbs.router, tags=["wbs"])
+api_router.include_router(admin_stats.router, tags=["admin"])

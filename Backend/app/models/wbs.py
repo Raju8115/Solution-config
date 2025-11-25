@@ -13,4 +13,9 @@ class WBS(Base):
     wbs_weeks = Column(Integer)
     
     # Relationships
-    activities = relationship("ActivityWBS", back_populates="wbs")
+    activities = relationship(
+    "ActivityWBS", 
+    back_populates="wbs",
+    cascade="all, delete-orphan",
+    passive_deletes=True
+)

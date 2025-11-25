@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContexts';
+import { usePermissions } from '../hooks/usePermissions';
 import {
   Button,
   Tabs,
@@ -21,8 +22,9 @@ import {
   TableBody,
   TableCell,
   Tile,
-  Loading,
   InlineNotification,
+  SkeletonText,
+  SkeletonPlaceholder,
 } from '@carbon/react';
 import {
   ArrowLeft,
@@ -36,20 +38,393 @@ import {
   CheckmarkOutline,
   UserRole,
   Warning,
+  Edit,
+  TrashCan,
+  Add,
+  Settings,
 } from '@carbon/icons-react';
 import { useOfferingDetail } from '../hooks/useOfferingDetail';
 import offeringService from '../services/offeringService';
 import './OfferingDetail.scss';
 
+// Skeleton Component for Header Section
+function OfferingHeaderSkeleton() {
+  return (
+    <div className="offering-detail__header">
+      <div className="offering-detail__header-content">
+        <div className="offering-detail__title-section">
+          <SkeletonText heading width="60%" className="mb-3" />
+          <div className="offering-detail__tags flex gap-2">
+            <SkeletonPlaceholder style={{ width: '80px', height: '24px' }} />
+            <SkeletonPlaceholder style={{ width: '100px', height: '24px' }} />
+            <SkeletonPlaceholder style={{ width: '90px', height: '24px' }} />
+          </div>
+        </div>
+
+        <div className="offering-detail__price-cards">
+          <Tile className="offering-detail__price-tile">
+            <div className="offering-detail__price-content">
+              <SkeletonPlaceholder style={{ width: '32px', height: '32px', borderRadius: '4px' }} />
+              <div style={{ flex: 1 }}>
+                <SkeletonText width="60%" className="mb-2" />
+                <SkeletonText heading width="80%" />
+              </div>
+            </div>
+          </Tile>
+
+          <Tile className="offering-detail__price-tile">
+            <div className="offering-detail__price-content">
+              <SkeletonPlaceholder style={{ width: '32px', height: '32px', borderRadius: '4px' }} />
+              <div style={{ flex: 1 }}>
+                <SkeletonText width="60%" className="mb-2" />
+                <SkeletonText heading width="80%" />
+              </div>
+            </div>
+          </Tile>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Skeleton Component for Data Table
+function TableSkeleton({ rows = 5, columns = 8 }) {
+  return (
+    <div className="offering-detail__table-skeleton">
+      <Tile>
+        {/* Table Header */}
+        <div className="flex gap-4 mb-4 pb-3" style={{ borderBottom: '1px solid #e0e0e0' }}>
+          {[...Array(columns)].map((_, i) => (
+            <SkeletonText key={i} width={`${100 / columns}%`} />
+          ))}
+        </div>
+        
+        {/* Table Rows */}
+        {[...Array(rows)].map((_, rowIndex) => (
+          <div key={rowIndex} className="flex gap-4 mb-3">
+            {[...Array(columns)].map((_, colIndex) => (
+              <div key={colIndex} style={{ width: `${100 / columns}%` }}>
+                {colIndex === 2 ? (
+                  <SkeletonPlaceholder style={{ width: '80px', height: '24px' }} />
+                ) : (
+                  <SkeletonText width="90%" />
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
+      </Tile>
+    </div>
+  );
+}
+
+// Skeleton Component for Dashboard Cards
+function DashboardSkeleton() {
+  return (
+    <div className="offering-detail__tab-content">
+      {/* Stats Grid */}
+      <div className="offering-detail__dashboard-grid offering-detail__dashboard-grid--four mb-6">
+        {[...Array(4)].map((_, index) => (
+          <Tile key={index} className="offering-detail__stat-tile bg-white">
+            <SkeletonText width="60%" className="mb-2" />
+            <SkeletonText heading width="50%" />
+          </Tile>
+        ))}
+      </div>
+
+      {/* Section Title */}
+      <div className="mb-4">
+        <SkeletonText heading width="30%" />
+      </div>
+
+      {/* Staffing Grid */}
+      <div className="offering-detail__staffing-grid mb-6">
+        {[...Array(3)].map((_, index) => (
+          <Tile key={index} className="offering-detail__staff-tile bg-white">
+            <div className="offering-detail__staff-header mb-4">
+              <div style={{ flex: 1 }}>
+                <SkeletonText width="70%" className="mb-2" />
+                <SkeletonText width="50%" />
+              </div>
+              <SkeletonPlaceholder style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+            </div>
+            <div className="offering-detail__staff-stats">
+              <div>
+                <SkeletonText width="60%" className="mb-1" />
+                <SkeletonText heading width="40%" />
+              </div>
+              <div>
+                <SkeletonText width="60%" className="mb-1" />
+                <SkeletonText heading width="50%" />
+              </div>
+            </div>
+          </Tile>
+        ))}
+      </div>
+
+      {/* Another Section Title */}
+      <div className="mb-4">
+        <SkeletonText heading width="35%" />
+      </div>
+
+      {/* Pricing Grid */}
+      <div className="offering-detail__dashboard-grid">
+        {[...Array(3)].map((_, index) => (
+          <Tile key={index} className="offering-detail__phase-tile bg-white">
+            <SkeletonPlaceholder style={{ width: '100px', height: '24px', marginBottom: '12px' }} />
+            <SkeletonText heading width="60%" className="mb-2" />
+            <SkeletonText width="50%" className="mb-3" />
+            <div className="offering-detail__phase-stats">
+              <div>
+                <SkeletonText width="70%" className="mb-1" />
+                <SkeletonText heading width="40%" />
+              </div>
+              <div>
+                <SkeletonText width="70%" className="mb-1" />
+                <SkeletonText heading width="40%" />
+              </div>
+            </div>
+          </Tile>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Skeleton Component for Fine Print Tab
+function FinePrintSkeleton() {
+  return (
+    <div className="offering-detail__tab-content bg-white">
+      <div className="mb-4">
+        <SkeletonText heading width="40%" />
+      </div>
+
+      {[...Array(4)].map((_, index) => (
+        <Tile key={index} className="offering-detail__fine-print-section mb-4">
+          <div className="offering-detail__fine-print-header mb-3">
+            <SkeletonPlaceholder style={{ width: '20px', height: '20px', marginRight: '8px' }} />
+            <SkeletonText heading width="30%" />
+          </div>
+          <SkeletonText paragraph lineCount={3} width="100%" />
+        </Tile>
+      ))}
+
+      <div className="offering-detail__fine-print-footer">
+        <Tile className="offering-detail__info-tile">
+          <div className="offering-detail__info-item mb-3">
+            <SkeletonText width="20%" className="mb-2" />
+            <SkeletonPlaceholder style={{ width: '120px', height: '24px' }} />
+          </div>
+          <div className="offering-detail__info-item">
+            <SkeletonText width="25%" className="mb-2" />
+            <SkeletonPlaceholder style={{ width: '150px', height: '32px' }} />
+          </div>
+        </Tile>
+      </div>
+    </div>
+  );
+}
+
+// Complete Skeleton for Offering Detail Page
+function OfferingDetailSkeleton() {
+  return (
+    <div className="offering-detail pt-5">
+      <div className="offering-detail__container">
+        {/* Back Button Skeleton */}
+        <div className="mb-4">
+          <SkeletonPlaceholder style={{ width: '140px', height: '48px' }} />
+        </div>
+
+        {/* Header Skeleton */}
+        <OfferingHeaderSkeleton />
+
+        {/* Tabs Skeleton */}
+        <div className="mt-6">
+          {/* Tab List Skeleton */}
+          <div className="flex gap-2 mb-4" style={{ borderBottom: '1px solid #e0e0e0', paddingBottom: '8px' }}>
+            <SkeletonPlaceholder style={{ width: '100px', height: '40px' }} />
+            <SkeletonPlaceholder style={{ width: '120px', height: '40px' }} />
+            <SkeletonPlaceholder style={{ width: '100px', height: '40px' }} />
+          </div>
+
+          {/* Tab Content Skeleton */}
+          <div className="offering-detail__tab-content">
+            <div className="mb-4">
+              <SkeletonText heading width="40%" />
+            </div>
+            <TableSkeleton rows={8} columns={8} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Skeleton for Related Offerings Table (ELA Dealmaker)
+function RelatedOfferingsSkeleton() {
+  return (
+    <div className="offering-detail__tab-content">
+      <div className="offering-detail__section-header mb-4">
+        <SkeletonText heading width="30%" />
+      </div>
+      <TableSkeleton rows={6} columns={7} />
+    </div>
+  );
+}
+
+// Detailed Information Modal Component
+function OfferingDetailModal({ offering, open, onClose }) {
+  if (!offering) return null;
+
+  return (
+    <Modal
+      open={open}
+      onRequestClose={onClose}
+      modalHeading={offering.offering_name}
+      modalLabel={offering.saas_type || 'Offering Details'}
+      passiveModal
+      size="lg"
+    >
+      <div className="space-y-6">
+        {/* Offering Summary */}
+        {offering.offering_summary && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Document size={20} />
+              <h4 className="text-heading-03 font-semibold">Summary</h4>
+            </div>
+            <p className="text-body-01 ml-7">{offering.offering_summary}</p>
+          </div>
+        )}
+
+        {/* Scope */}
+        {offering.scope_summary && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Package size={20} />
+              <h4 className="text-heading-03 font-semibold">Scope</h4>
+            </div>
+            <p className="text-body-01 ml-7">{offering.scope_summary}</p>
+          </div>
+        )}
+
+        {/* Outcomes */}
+        {offering.offering_outcomes && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <CheckmarkOutline size={20} />
+              <h4 className="text-heading-03 font-semibold">Expected Outcomes</h4>
+            </div>
+            <p className="text-body-01 ml-7">{offering.offering_outcomes}</p>
+          </div>
+        )}
+
+        {/* Key Deliverables */}
+        {offering.key_deliverables && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Document size={20} />
+              <h4 className="text-heading-03 font-semibold">Key Deliverables</h4>
+            </div>
+            <p className="text-body-01 ml-7">{offering.key_deliverables}</p>
+          </div>
+        )}
+
+        {/* Prerequisites */}
+        {offering.prerequisites && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Warning size={20} className="text-yellow-30" />
+              <h4 className="text-heading-03 font-semibold">Prerequisites</h4>
+            </div>
+            <p className="text-body-01 ml-7">{offering.prerequisites}</p>
+          </div>
+        )}
+
+        {/* Part Number */}
+        {offering.part_numbers && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Package size={20} />
+              <h4 className="text-heading-03 font-semibold">Part Number</h4>
+            </div>
+            <code className="ml-7 text-body-01 font-mono">{offering.part_numbers}</code>
+          </div>
+        )}
+
+        {/* Seismic Link */}
+        {offering.seismic_link && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Link size={20} />
+              <h4 className="text-heading-03 font-semibold">Content Resources</h4>
+            </div>
+            <a
+              href={offering.seismic_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-7 text-link-01 flex items-center gap-1 hover:underline"
+            >
+              View in Seismic <Link size={16} />
+            </a>
+          </div>
+        )}
+
+        {/* Summary */}
+        <div className="bg-layer-01 p-4 mt-4">
+          <div className="flex justify-between text-body-01 mb-2">
+            <span>Duration:</span>
+            <span className="font-semibold">{offering.duration || 'N/A'}</span>
+          </div>
+          {offering.industry && (
+            <div className="flex justify-between text-body-01 mb-2">
+              <span>Industry:</span>
+              <span className="font-semibold">{offering.industry}</span>
+            </div>
+          )}
+          {offering.client_type && (
+            <div className="flex justify-between text-body-01">
+              <span>Client Type:</span>
+              <span className="font-semibold">{offering.client_type}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Contact Information */}
+        {(offering.offering_sales_contact || offering.offering_product_manager) && (
+          <div className="bg-layer-01 p-4">
+            <h4 className="text-heading-03 font-semibold mb-3">Contact Information</h4>
+            {offering.offering_sales_contact && (
+              <div className="flex justify-between text-body-01 mb-2">
+                <span>Sales Contact:</span>
+                <a href={`mailto:${offering.offering_sales_contact}`} className="text-link-01">
+                  {offering.offering_sales_contact}
+                </a>
+              </div>
+            )}
+            {offering.offering_product_manager && (
+              <div className="flex justify-between text-body-01">
+                <span>Product Manager:</span>
+                <a href={`mailto:${offering.offering_product_manager}`} className="text-link-01">
+                  {offering.offering_product_manager}
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 export function OfferingDetail() {
   const { offeringId } = useParams();
   const navigate = useNavigate();
-  const { userRole } = useAuth();
+  const { userRoles, userProfile } = useAuth();
+  const permissions = usePermissions();
 
   // Fetch offering details using custom hook
   const { offering, activities, staffing, pricing, loading, error, refetch } = useOfferingDetail(offeringId);
-
-  // console.log("Pricing-> ", pricing)
 
   // State for ELA Dealmaker selections
   const [selectedActivity, setSelectedActivity] = useState(null);
@@ -59,9 +434,9 @@ export function OfferingDetail() {
   const [relatedOfferings, setRelatedOfferings] = useState([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
 
-  // Check if user should see simplified view
-  const isBrandSalesRep = userRole === 'brand-sales-and-renewal-rep';
-  const isELADealmaker = userRole === 'deal-maker';
+  // Business role checks (from user profile, not BlueGroups)
+  const isBrandSalesRep = false;
+  const isELADealmaker = false;
 
   // Fetch related offerings for Deal Maker view
   useEffect(() => {
@@ -93,11 +468,29 @@ export function OfferingDetail() {
     });
   };
 
+  // Admin actions
+  const handleEditOffering = () => {
+    navigate(`/admin/offerings/edit/${offeringId}`);
+  };
+
+  const handleDeleteOffering = async () => {
+    if (window.confirm('Are you sure you want to delete this offering? This action cannot be undone.')) {
+      try {
+        await offeringService.deleteOffering(offeringId);
+        navigate('/catalog');
+      } catch (err) {
+        alert('Failed to delete offering: ' + err.message);
+      }
+    }
+  };
+
+  const handleManageActivities = () => {
+    navigate(`/offerings/edit/${offeringId}`);
+  };
+
   // Calculate total for selected offerings
   const calculateSelectedTotal = () => {
-    // Since we don't have price in offering data, we'll use a placeholder
-    // You can modify this based on your actual pricing structure
-    return selectedOfferings.length * 50000; // Placeholder calculation
+    return selectedOfferings.length * 50000;
   };
 
   // Get block tag type for activities
@@ -126,10 +519,10 @@ export function OfferingDetail() {
     seismicLink: offering?.seismic_link || '#'
   }));
 
-  // Calculate activity price (placeholder - adjust based on your logic)
+  // Calculate activity price
   function calculateActivityPrice(activity) {
     const hours = activity.effort_hours || activity.duration_hours || 40;
-    const rate = activity.fixed_price || (hours * 430); // $430/hour average
+    const rate = activity.fixed_price || (hours * 430);
     return Math.round(rate);
   }
 
@@ -155,14 +548,14 @@ export function OfferingDetail() {
     return acc;
   }, {});
 
-  // Simplified offerings for Deal Maker (using related offerings)
+  // Simplified offerings for Deal Maker
   const simplifiedOfferings = relatedOfferings.map((off, index) => ({
     id: off.offering_id,
     productName: off.supported_product || off.brand || 'Product',
     offeringName: off.offering_name,
     outcome: off.offering_outcomes?.substring(0, 100) || '',
     description: off.tag_line || off.offering_summary?.substring(0, 100) || '',
-    price: 50000 + (index * 10000), // Placeholder pricing
+    price: 50000 + (index * 10000),
     parts: off.part_numbers || ''
   }));
 
@@ -254,17 +647,9 @@ export function OfferingDetail() {
     </div>
   );
 
-  // Loading state
+  // Loading state - Show skeleton
   if (loading) {
-    return (
-      <div className="offering-detail">
-        <div className="offering-detail__container">
-          <div className="flex items-center justify-center" style={{ minHeight: '60vh' }}>
-            <Loading description="Loading offering details..." withOverlay={false} />
-          </div>
-        </div>
-      </div>
-    );
+    return <OfferingDetailSkeleton />;
   }
 
   // Error state
@@ -322,20 +707,44 @@ export function OfferingDetail() {
     return (
       <div className="offering-detail">
         <div className="offering-detail__container">
-          <Button
-            kind="ghost"
-            renderIcon={ArrowLeft}
-            onClick={() => navigate('/catalog')}
-            className="offering-detail__back-button"
-          >
-            Back to Catalog
-          </Button>
+          <div className="flex items-center justify-between mb-4">
+            <Button
+              kind="ghost"
+              renderIcon={ArrowLeft}
+              onClick={() => navigate('/catalog')}
+              className="offering-detail__back-button"
+            >
+              Back to Catalog
+            </Button>
+
+            {permissions.canEditOfferings && (
+              <div className="flex gap-2">
+                <Button
+                  kind="tertiary"
+                  renderIcon={Edit}
+                  onClick={handleEditOffering}
+                >
+                  Edit Offering
+                </Button>
+                <Button
+                  kind="danger--tertiary"
+                  renderIcon={TrashCan}
+                  onClick={handleDeleteOffering}
+                >
+                  Delete
+                </Button>
+              </div>
+            )}
+          </div>
 
           <div className="offering-detail__header">
             <div className="offering-detail__header-content">
               <div className="offering-detail__title-section">
                 <h1 className="offering-detail__title">
                   {offering.offering_name}
+                  {permissions.isAdmin && (
+                    <Tag type="red" size="sm" className="ml-2">ADMIN VIEW</Tag>
+                  )}
                 </h1>
                 <div className="offering-detail__tags">
                   {offering.saas_type && <Tag type="blue">{offering.saas_type}</Tag>}
@@ -396,7 +805,7 @@ export function OfferingDetail() {
                   </div>
 
                   {loadingRelated ? (
-                    <Loading description="Loading related offerings..." />
+                    <RelatedOfferingsSkeleton />
                   ) : simplifiedOfferings.length > 0 ? (
                     <DataTable rows={simplifiedRows} headers={simplifiedHeaders}>
                       {({ rows, headers, getHeaderProps, getTableProps }) => (
@@ -469,81 +878,7 @@ export function OfferingDetail() {
               </TabPanel>
 
               <TabPanel>
-                <div className="offering-detail__tab-content">
-                  <div className="offering-detail__section-title">
-                    <Currency size={24} className="offering-detail__icon--green" />
-                    <h2>Pricing Dashboard</h2>
-                  </div>
-
-                  <div className="offering-detail__dashboard-grid">
-                    <Tile className="offering-detail__stat-tile offering-detail__stat-tile--blue">
-                      <div className="offering-detail__stat-label">Total Items</div>
-                      <div className="offering-detail__stat-value">
-                        {simplifiedOfferings.length}
-                      </div>
-                    </Tile>
-                    <Tile className="offering-detail__stat-tile offering-detail__stat-tile--green">
-                      <div className="offering-detail__stat-label">Total Price</div>
-                      <div className="offering-detail__stat-value">
-                        ${totalSimplifiedPrice.toLocaleString()}
-                      </div>
-                    </Tile>
-                    <Tile className="offering-detail__stat-tile offering-detail__stat-tile--purple">
-                      <div className="offering-detail__stat-label">Average Price</div>
-                      <div className="offering-detail__stat-value">
-                        ${simplifiedOfferings.length > 0 
-                          ? Math.round(totalSimplifiedPrice / simplifiedOfferings.length).toLocaleString()
-                          : 0}
-                      </div>
-                    </Tile>
-                  </div>
-
-                  {selectedOfferings.length > 0 && (
-                    <>
-                      <div className="offering-detail__dashboard-grid">
-                        <Tile className="offering-detail__stat-tile offering-detail__stat-tile--blue">
-                          <div className="offering-detail__stat-label">Selected Items</div>
-                          <div className="offering-detail__stat-value">
-                            {selectedOfferings.length}
-                          </div>
-                        </Tile>
-                        <Tile className="offering-detail__stat-tile offering-detail__stat-tile--green">
-                          <div className="offering-detail__stat-label">Selected Total</div>
-                          <div className="offering-detail__stat-value">
-                            ${selectedTotal.toLocaleString()}
-                          </div>
-                        </Tile>
-                        <Tile className="offering-detail__stat-tile offering-detail__stat-tile--purple">
-                          <div className="offering-detail__stat-label">Average per Item</div>
-                          <div className="offering-detail__stat-value">
-                            ${Math.round(selectedTotal / selectedOfferings.length).toLocaleString()}
-                          </div>
-                        </Tile>
-                      </div>
-
-                      <div className="offering-detail__selected-section">
-                        <h3>Selected Offerings</h3>
-                        <div className="offering-detail__offering-cards">
-                          {simplifiedOfferings
-                            .filter(item => selectedOfferings.includes(String(item.id)))
-                            .map((item) => (
-                              <Tile key={item.id} className="offering-detail__offering-card">
-                                <div className="offering-detail__offering-card-content">
-                                  <div>
-                                    <div className="offering-detail__offering-name">{item.offeringName}</div>
-                                    <div className="offering-detail__product-name">{item.productName}</div>
-                                  </div>
-                                  <div className="offering-detail__offering-price">
-                                    ${item.price.toLocaleString()}
-                                  </div>
-                                </div>
-                              </Tile>
-                            ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+                <DashboardSkeleton />
               </TabPanel>
 
               <TabPanel>
@@ -556,7 +891,7 @@ export function OfferingDetail() {
     );
   }
 
-  // Standard detailed view for Seller and Architect
+  // Standard detailed view for all users
   const detailedHeaders = [
     { key: 'activityNumber', header: '#' },
     { key: 'activityId', header: 'Activity ID' },
@@ -584,14 +919,37 @@ export function OfferingDetail() {
   return (
     <div className="offering-detail pt-5">
       <div className="offering-detail__container">
-        <Button
-          kind="ghost"
-          renderIcon={ArrowLeft}
-          onClick={() => navigate('/catalog')}
-          className="offering-detail__back-button"
-        >
-          Back to Catalog
-        </Button>
+        <div className="flex items-center justify-between mb-4">
+          <Button
+            kind="ghost"
+            renderIcon={ArrowLeft}
+            onClick={() => navigate('/catalog')}
+            className="offering-detail__back-button"
+          >
+            Back to Catalog
+          </Button>
+
+          <div className="flex gap-2">
+            {permissions.canEditOfferings && (
+              <>
+                <Button
+                  kind="tertiary"
+                  renderIcon={Edit}
+                  onClick={handleEditOffering}
+                >
+                  Edit Offering
+                </Button>
+                <Button
+                  kind="danger--tertiary"
+                  renderIcon={TrashCan}
+                  onClick={handleDeleteOffering}
+                >
+                  Delete
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
 
         <div className="offering-detail__header">
           <div className="offering-detail__header-content">
@@ -602,7 +960,6 @@ export function OfferingDetail() {
               <div className="offering-detail__tags">
                 {offering.saas_type && <Tag type="blue">{offering.saas_type}</Tag>}
                 {offering.brand && <Tag type="gray">{offering.brand}</Tag>}
-                {offering.industry && <Tag type="gray">{offering.industry}</Tag>}
               </div>
             </div>
 
@@ -613,7 +970,7 @@ export function OfferingDetail() {
                   <div>
                     <div className="offering-detail__price-label">Total Effort</div>
                     <div className="offering-detail__price-value">
-                      {pricing?.total_hours || totalEffort} hours
+                      {totalEffort || pricing?.total_hours} hours
                     </div>
                   </div>
                 </div>

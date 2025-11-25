@@ -23,6 +23,8 @@ def get_activities_by_offering(db: Session, offering_id: str) -> List[dict]:
         activity_dict = {
             "activity_id": activity.activity_id,
             "activity_name": activity.activity_name,
+            "brand": activity.brand,
+            "product_name": activity.product_name,
             "category": activity.category,
             "part_numbers": activity.part_numbers,
             "duration_weeks": activity.duration_weeks,

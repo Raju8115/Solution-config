@@ -9,8 +9,8 @@ class StaffingDetail(Base):
     __tablename__ = "staffing_details"
 
     staffing_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    activity_id = Column(UUID(as_uuid=True), ForeignKey("activities.activity_id"), nullable=False)
-    # offering_id = Column(UUID(as_uuid=True), ForeignKey("offerings.offering_id"), nullable=False)
+    activity_id = Column(UUID(as_uuid=True), ForeignKey("activities.activity_id", ondelete="CASCADE"), nullable=False)
+   
     country = Column(String(50))
     role = Column(String(100))
     band = Column(Integer)
@@ -19,3 +19,4 @@ class StaffingDetail(Base):
     # Relationships
     activity = relationship("Activity", back_populates="staffing_details")
     # offering = relationship("Offering", back_populates="staffing_details")
+ # offering_id = Column(UUID(as_uuid=True), ForeignKey("offerings.offering_id"), nullable=False)

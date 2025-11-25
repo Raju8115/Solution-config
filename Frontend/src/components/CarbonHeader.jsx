@@ -3,6 +3,7 @@ import {
   UserAvatar,
   Logout,
   User,
+  Checkmark,
 } from "@carbon/icons-react";
 import {
   Header,
@@ -18,44 +19,43 @@ import {
   SwitcherDivider,
   SkipToContent,
   HeaderMenuItem,
+  Tag,
 } from "@carbon/react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContexts";
+import { usePermissions } from "../hooks/usePermissions";
 import IBMLogo from "../images/ibm-logo-black.png";
 
-const roles = [
-  { id: "seller", label: "Seller" },
-  { id: "solution-architect", label: "Solution Architect" },
-  { id: "brand-sales-and-renewal-rep", label: "Brand Sales and Renewal Rep" },
-  { id: "deal-maker", label: "Deal Maker" },
-];
-
-export function CarbonHeader({
-  onLogout,
-  userRole,
-  onRoleChange,
-  currentPage,
-  onToggleSidebar,
-}) {
+export function CarbonHeader({ onToggleSidebar }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const navigate = useNavigate(); // ✅ React Router navigation hook
+  const navigate = useNavigate();
+  const location = useLocation(); // ✅ Add this to detect current route
+  
+  const { user, userRoles, userProfile, logout } = useAuth();
+  const permissions = usePermissions();
 
-  // Get user display info based on role
-  const getUserInfo = () => {
-    switch (userRole) {
-      case "admin":
-        return { name: "Admin User", email: "admin@ibm.com" };
-      case "solution-architect":
-        return { name: "Solution Architect", email: "architect@ibm.com" };
-      case "brand-sales-and-renewal-rep":
-        return { name: "Brand Sales Rep", email: "brand-sales@ibm.com" };
-      case "deal-maker":
-        return { name: "Deal Maker", email: "deal-maker@ibm.com" };
-      default:
-        return { name: "Sales User", email: "seller@ibm.com" };
+  // ✅ Determine active page from current location
+  const isActivePage = (path) => {
+    if (path === '/catalog') {
+      return location.pathname === '/catalog' || location.pathname.startsWith('/offering/');
     }
+    return location.pathname.startsWith(path);
   };
 
-  const userInfo = getUserInfo();
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (userProfile?.name) return userProfile.name;
+    if (user?.name) return user.name;
+    if (user?.email) return user.email.split('@')[0];
+    return 'User';
+  };
+
+  // Get user email
+  const getUserEmail = () => {
+    if (user?.email) return user.email;
+    if (userProfile?.email) return userProfile.email;
+    return '';
+  };
 
   return (
     <>
@@ -76,8 +76,8 @@ export function CarbonHeader({
             {/* Logo and Title */}
             <HeaderName
               prefix=""
-              style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
-              onClick={() => navigate("/catalog")} // clickable logo
+              style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer" }}
+              onClick={() => navigate("/catalog")}
             >
               <img
                 src={IBMLogo}
@@ -87,7 +87,6 @@ export function CarbonHeader({
                   width: "auto",
                   objectFit: "contain",
                   background: "transparent",
-                  cursor: "pointer",
                 }}
               />
               <span style={{ fontSize: "0.975rem", whiteSpace: "nowrap" }}>
@@ -100,55 +99,96 @@ export function CarbonHeader({
               aria-label="Main Navigation"
               className="custom-header-nav"
             >
+              {/* Catalog - Available to all authenticated users */}
               <HeaderMenuItem
                 onClick={() => navigate("/catalog")}
-                isActive={currentPage === "catalog"}
+                isActive={isActivePage('/catalog')}
               >
                 Catalog
               </HeaderMenuItem>
 
-              {(userRole === "solution-architect" || userRole === "admin") && (
+              {/* Solution Builder - Solution Architects & Admins */}
+              {permissions.canBuildSolutions && (
                 <HeaderMenuItem
                   onClick={() => navigate("/solution-builder")}
-                  isActive={currentPage === "solution-builder"}
+                  isActive={isActivePage('/solution-builder')}
                 >
                   Solution Builder
                 </HeaderMenuItem>
               )}
 
-              {userRole === "admin" && (
+              {/* Admin - Administrators only */}
+              {permissions.isAdmin && (
                 <>
                   <HeaderMenuItem
                     onClick={() => navigate("/admin")}
-                    isActive={currentPage === "admin"}
+                    isActive={isActivePage('/admin')}
                   >
                     Admin
                   </HeaderMenuItem>
-                  <HeaderMenuItem
+                  {/* <HeaderMenuItem
                     onClick={() => navigate("/import-export")}
-                    isActive={currentPage === "import-export"}
+                    isActive={isActivePage('/import-export')}
                   >
                     Import/Export
-                  </HeaderMenuItem>
+                  </HeaderMenuItem> */}
                 </>
               )}
             </HeaderNavigation>
 
             {/* Right Section */}
             <HeaderGlobalBar>
-              {/* Role Selector Placeholder (commented out) */}
+              {/* User Info & Role Badge */}
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  marginRight: "0.5rem",
-                  minWidth: "220px",
+                  gap: "0.75rem",
+                  marginRight: "1rem",
+                  color: "white",
                 }}
-              ></div>
+              >
+                {/* User Name (Hidden on mobile) */}
+                <span 
+                  style={{ 
+                    fontSize: "0.875rem",
+                    display: "none",
+                  }}
+                  className="user-name-desktop"
+                >
+                  {getUserDisplayName()}
+                </span>
+
+                {/* Role Badge */}
+                {userRoles.is_admin && (
+                  <Tag 
+                    type="red" 
+                    size="sm"
+                    style={{
+                      cursor: 'default',
+                      fontWeight: 600
+                    }}
+                  >
+                    ADMIN
+                  </Tag>
+                )}
+                {userRoles.is_solution_architect && !userRoles.is_admin && (
+                  <Tag 
+                    type="blue" 
+                    size="sm"
+                    style={{
+                      cursor: 'default',
+                      fontWeight: 600
+                    }}
+                  >
+                    SOLUTION ARCHITECT
+                  </Tag>
+                )}
+              </div>
 
               {/* User Menu */}
               <HeaderGlobalAction
-                aria-label="User"
+                aria-label="User Menu"
                 tooltipAlignment="end"
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 isActive={isUserMenuOpen}
@@ -162,31 +202,69 @@ export function CarbonHeader({
                 onHeaderPanelFocus={() => setIsUserMenuOpen(true)}
               >
                 <Switcher aria-label="User Menu">
-                  {/* User Info */}
+                  {/* User Info Section */}
                   <div
                     style={{
                       padding: "1rem",
                       borderBottom: "1px solid #e0e0e0",
                     }}
                   >
-                    <p
-                      style={{
-                        fontSize: "0.875rem",
-                        fontWeight: 600,
-                        marginBottom: "0.25rem",
-                        color: "#161616",
-                      }}
-                    >
-                      {userInfo.name}
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <p
+                        style={{
+                          fontSize: "0.875rem",
+                          fontWeight: 600,
+                          color: "#161616",
+                        }}
+                      >
+                        {getUserDisplayName()}
+                      </p>
+                      {/* Role Badge in dropdown */}
+                      {userRoles.is_admin && (
+                        <Tag type="red" size="sm">ADMIN</Tag>
+                      )}
+                      {userRoles.is_solution_architect && !userRoles.is_admin && (
+                        <Tag type="blue" size="sm">ARCHITECT</Tag>
+                      )}
+                    </div>
                     <p
                       style={{
                         fontSize: "0.75rem",
                         color: "#525252",
+                        marginBottom: "0.5rem",
                       }}
                     >
-                      {userInfo.email}
+                      {getUserEmail()}
                     </p>
+
+                    {/* Permissions Display */}
+                    <div style={{ 
+                      marginTop: '0.75rem',
+                      paddingTop: '0.75rem',
+                      borderTop: '1px solid #e0e0e0',
+                      fontSize: '0.75rem',
+                      color: '#525252'
+                    }}>
+                      <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Your Access:</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Checkmark size={16} style={{ color: '#24a148' }} />
+                          <span>View Catalog</span>
+                        </div>
+                        {permissions.canBuildSolutions && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Checkmark size={16} style={{ color: '#24a148' }} />
+                            <span>Build Solutions</span>
+                          </div>
+                        )}
+                        {permissions.isAdmin && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Checkmark size={16} style={{ color: '#24a148' }} />
+                            <span>Full Admin Access</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Menu Items */}
@@ -202,14 +280,14 @@ export function CarbonHeader({
                     }}
                   >
                     <User size={16} />
-                    Profile
+                    View Profile
                   </SwitcherItem>
 
                   <SwitcherDivider />
 
                   <SwitcherItem
                     onClick={() => {
-                      onLogout();
+                      logout();
                       setIsUserMenuOpen(false);
                     }}
                     style={{
@@ -230,41 +308,76 @@ export function CarbonHeader({
       />
 
       {/* Custom Styles */}
-      <style>{`
-        /* Center navigation on desktop */
-        @media (min-width: 1056px) {
-          .custom-header-nav {
-            position: absolute !important;
-            left: 50% !important;
-            transform: translateX(-50%) !important;
-          }
-        }
+      {/* Custom Styles */}
+<style>{`
+  /* ✅ CRITICAL: Ensure header is always on top with highest z-index */
+  .cds--header {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    z-index: 9999 !important;
+  }
 
-        /* Hide sidebar toggle on desktop */
-        @media (min-width: 1056px) {
-          .cds--header__menu-toggle--sm {
-            display: none;
-          }
-        }
+  /* Header panel (dropdown) should be just below header */
+  .cds--header-panel {
+    right: 0;
+    z-index: 9998 !important;
+    top: 48px !important;
+  }
 
-        /* Reset navigation position on mobile/tablet */
-        @media (max-width: 1055px) {
-          .custom-header-nav {
-            position: static !important;
-            transform: none !important;
-          }
-        }
+  /* Center navigation on desktop */
+  @media (min-width: 1056px) {
+    .custom-header-nav {
+      position: absolute !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+    }
+    
+    .user-name-desktop {
+      display: inline !important;
+    }
+  }
 
-        /* Adjust user menu panel positioning */
-        .cds--header-panel {
-          right: 0;
-        }
+  /* Hide sidebar toggle on desktop */
+  @media (min-width: 1056px) {
+    .cds--header__menu-toggle--sm {
+      display: none;
+    }
+  }
 
-        /* Reduce spacing in HeaderGlobalBar */
-        .cds--header__global > * {
-          margin-left: 0;
-        }
-      `}</style>
+  /* Reset navigation position on mobile/tablet */
+  @media (max-width: 1055px) {
+    .custom-header-nav {
+      position: static !important;
+      transform: none !important;
+    }
+  }
+
+  /* Reduce spacing in HeaderGlobalBar */
+  .cds--header__global > * {
+    margin-left: 0.25rem;
+  }
+
+  /* Improve role badge visibility */
+  .cds--header__global .cds--tag {
+    font-size: 0.6875rem;
+    padding: 0.125rem 0.5rem;
+    height: auto;
+    min-height: 1.25rem;
+  }
+
+  /* User menu hover effects */
+  .cds--switcher__item:hover {
+    background-color: #e0e0e0;
+  }
+
+  /* Clickable logo cursor */
+  .cds--header__name {
+    cursor: pointer;
+  }
+`}</style>
     </>
   );
 }

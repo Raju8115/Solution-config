@@ -39,18 +39,53 @@ const mockUsers = [
 ];
 
 export function UserProfile({ onNavigate, onLogout }) {
-  const { userRole, userProfile } = useAuth()
+  const { isAdmin, isSolutionArchitect, userProfile, loading } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
 
-  const currentUser = {
-    name: userRole === 'admin' ? 'Alice Williams' : userRole === 'architect' ? 'Bob Martin' : 'Carol White',
-    email: `${userRole}@ibm.com`,
-    role: userRole,
-    department: userRole === 'admin' ? 'IT Services' : userRole === 'architect' ? 'Cloud Solutions' : 'Sales',
-    phone: '+1 (555) 123-4567',
-    location: 'New York, NY',
-    joinDate: 'January 15, 2022',
+  // Show loading state while auth is being checked
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#f4f4f4', paddingTop: '3rem' }}>
+        <div style={{ maxWidth: '1584px', margin: '0 auto', padding: '1rem' }}>
+          <Tile style={{ padding: '2rem', textAlign: 'center' }}>
+            Loading user profile...
+          </Tile>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if profile is not available
+  if (!userProfile) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#f4f4f4', paddingTop: '3rem' }}>
+        <div style={{ maxWidth: '1584px', margin: '0 auto', padding: '1rem' }}>
+          <Tile style={{ padding: '2rem', textAlign: 'center' }}>
+            Unable to load user profile. Please try again.
+          </Tile>
+        </div>
+      </div>
+    );
+  }
+
+  // Determine user role display text
+  const getUserRole = () => {
+    if (isAdmin) return 'Admin';
+    if (isSolutionArchitect) return 'Solution Architect';
+    return 'User';
+  };
+
+  const userRoleDisplay = getUserRole();
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!userProfile?.name) return 'U';
+    return userProfile.name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase();
   };
 
   // Filter users based on search and role
@@ -243,7 +278,6 @@ export function UserProfile({ onNavigate, onLogout }) {
         <Tabs>
           <TabList aria-label="User Profile tabs" contained>
             <Tab>My Profile</Tab>
-            {userRole === 'admin' && <Tab>User Management</Tab>}
           </TabList>
           <TabPanels>
             {/* My Profile Tab */}
@@ -255,38 +289,30 @@ export function UserProfile({ onNavigate, onLogout }) {
                     <div style={styles.cardHeader}>
                       <div style={styles.avatar}>
                         <span style={styles.avatarText}>
-                          {userProfile.name.split(' ').map(n => n[0]).join('')}
+                          {getUserInitials()}
                         </span>
                       </div>
-                      <h2 style={styles.name}>{userProfile.name}</h2>
-                      <p style={styles.email}>{userProfile.email}</p>
+                      <h2 style={styles.name}>{userProfile.name || 'User'}</h2>
+                      <p style={styles.email}>{userProfile.email || ''}</p>
                       <Tag type="blue">
-                        {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+                        {userRoleDisplay}
                       </Tag>
                     </div>
 
                     <div style={styles.info}>
-                      {/* <div style={styles.infoItem}>
-                        <Building size={16} style={styles.infoIcon} />
-                        <span>{currentUser.department}</span>
-                      </div> */}
-                      <div style={styles.infoItem}>
-                        <Email size={16} style={styles.infoIcon} />
-                        <span>{userProfile.phoneNumber}</span>
-                      </div>
-                      <div style={styles.infoItem}>
-                        <Calendar size={16} style={styles.infoIcon} />
-                        <span>Joined {userProfile.joiningDate}</span>
-                      </div>
+                      {userProfile.phoneNumber && (
+                        <div style={styles.infoItem}>
+                          <Email size={16} style={styles.infoIcon} />
+                          <span>{userProfile.phoneNumber}</span>
+                        </div>
+                      )}
+                      {userProfile.joiningDate && (
+                        <div style={styles.infoItem}>
+                          <Calendar size={16} style={styles.infoIcon} />
+                          <span>Joined {userProfile.joiningDate}</span>
+                        </div>
+                      )}
                     </div>
-
-                    {/* <Button
-                      kind="secondary"
-                      renderIcon={Edit}
-                      style={styles.editButton}
-                    >
-                      Edit Profile
-                    </Button> */}
                   </Tile>
 
                   {/* Profile Details */}
@@ -297,163 +323,43 @@ export function UserProfile({ onNavigate, onLogout }) {
                       <TextInput
                         id="fullname"
                         labelText="Full Name"
-                        value={userProfile.name}
+                        value={userProfile.name || ''}
                         readOnly
                       />
 
                       <TextInput
                         id="email"
                         labelText="Email Address"
-                        value={userProfile.email}
+                        value={userProfile.email || ''}
                         readOnly
                       />
 
                       <TextInput
                         id="phone"
                         labelText="Phone Number"
-                        value={userProfile.phoneNumber}
+                        value={userProfile.phoneNumber || 'Not provided'}
                         readOnly
                       />
-
-                      {/* <TextInput
-                        id="department"
-                        labelText="Department"
-                        value={currentUser.department}
-                        readOnly
-                      /> */}
 
                       <TextInput
                         id="location"
                         labelText="Location"
-                        value={userProfile.location}
+                        value={userProfile.location || 'Not provided'}
                         readOnly
                       />
 
                       <TextInput
                         id="role"
                         labelText="Role"
-                        value={userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+                        value={userRoleDisplay}
                         readOnly
                       />
                     </div>
-
-                    {/* <div style={styles.permissions}>
-                      <h3 style={styles.subsectionTitle}>Permissions & Access</h3>
-                      <div style={styles.permissionList}>
-                        <div style={styles.permissionItem}>
-                          <Checkmark size={16} style={styles.permissionIcon} />
-                          <span>Access to Offerings Catalog</span>
-                        </div>
-                        {(userRole === 'architect' || userRole === 'admin') && (
-                          <div style={styles.permissionItem}>
-                            <Checkmark size={16} style={styles.permissionIcon} />
-                            <span>Access to Solution Builder</span>
-                          </div>
-                        )}
-                        {userRole === 'admin' && (
-                          <>
-                            <div style={styles.permissionItem}>
-                              <Checkmark size={16} style={styles.permissionIcon} />
-                              <span>Admin Dashboard Access</span>
-                            </div>
-                            <div style={styles.permissionItem}>
-                              <Checkmark size={16} style={styles.permissionIcon} />
-                              <span>User Management</span>
-                            </div>
-                            <div style={styles.permissionItem}>
-                              <Checkmark size={16} style={styles.permissionIcon} />
-                              <span>Data Import/Export</span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div> */}
                   </Tile>
                 </div>
               </div>
             </TabPanel>
 
-            {/* User Management Tab (Admin Only) */}
-            {userRole === 'admin' && (
-              <TabPanel>
-                <div style={styles.management}>
-                  <div style={styles.managementHeader}>
-                    <h2 style={styles.sectionTitle}>User Management</h2>
-                    <div style={styles.filters}>
-                      <SearchComponent
-                        size="sm"
-                        labelText="Search users"
-                        placeholder="Search users..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        style={styles.searchInput}
-                      />
-                      <Select
-                        id="role-filter"
-                        labelText=""
-                        value={roleFilter}
-                        onChange={(e) => setRoleFilter(e.target.value)}
-                        style={styles.selectInput}
-                      >
-                        <SelectItem value="all" text="All Roles" />
-                        <SelectItem value="admin" text="Admin" />
-                        <SelectItem value="architect" text="Architect" />
-                        <SelectItem value="seller" text="Seller" />
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div style={{ overflowX: 'auto' }}>
-                    <DataTable rows={rows} headers={headers}>
-                      {({ rows, headers, getHeaderProps, getTableProps }) => (
-                        <Table {...getTableProps()}>
-                          <TableHead>
-                            <TableRow>
-                              {headers.map((header) => (
-                                <TableHeader {...getHeaderProps({ header })} key={header.key}>
-                                  {header.header}
-                                </TableHeader>
-                              ))}
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {rows.map((row) => {
-                              const user = filteredUsers.find(u => u.id === row.id);
-                              return (
-                                <TableRow key={row.id}>
-                                  <TableCell>{user.name}</TableCell>
-                                  <TableCell>{user.email}</TableCell>
-                                  <TableCell>
-                                    <Tag type="blue">{user.role}</Tag>
-                                  </TableCell>
-                                  <TableCell>{user.department}</TableCell>
-                                  <TableCell>
-                                    <Tag type={user.status === 'Active' ? 'green' : 'gray'}>
-                                      {user.status}
-                                    </Tag>
-                                  </TableCell>
-                                  <TableCell>{user.lastLogin}</TableCell>
-                                  <TableCell>
-                                    <Button
-                                      kind="ghost"
-                                      size="sm"
-                                      hasIconOnly
-                                      renderIcon={Edit}
-                                      iconDescription="Edit user"
-                                      tooltipPosition="left"
-                                    />
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      )}
-                    </DataTable>
-                  </div>
-                </div>
-              </TabPanel>
-            )}
           </TabPanels>
         </Tabs>
       </div>

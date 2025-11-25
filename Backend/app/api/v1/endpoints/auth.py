@@ -2,8 +2,10 @@ from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
 from typing import Dict
 import logging
+from app.bluegroups_auth import is_user_in_group
 from app.config import settings
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_active_user, get_current_user
+from app.auth.permissions import get_user_roles
 import logging
 
 router = APIRouter()
@@ -30,26 +32,26 @@ async def login(request: Request):
 
 @router.get("/auth/callback")
 async def auth_callback(request: Request):
-    """
-    OAuth callback endpoint
-    Exchanges authorization code for tokens and creates session
-    """
     try:
         logger.info("Processing auth callback")
         
-        # Use the oauth instance from main.py
         from app.main import oauth
         
         # Exchange authorization code for tokens
         token = await oauth.appid.authorize_access_token(request)
         logger.info("Token exchange successful")
         
-        # Get user info from ID token or userinfo endpoint
+        # Get user info
         try:
             user = await oauth.appid.parse_id_token(request, token)
-            logger.info("ID token parsed successfully")
+            email = user.get("email")
+            roles = []
+            if is_user_in_group(email, "Solution_Architect"):
+                roles.append("Solution_Architect")
+            if is_user_in_group(email, "Administration"):
+                roles.append("Administration")
         except Exception as e:
-            logger.warning(f"Failed to parse ID token, using userinfo endpoint: {e}")
+            logger.warning(f"Failed to parse ID token: {e}")
             user = await oauth.appid.userinfo(token=token)
         
         # Store user info in session
@@ -62,26 +64,33 @@ async def auth_callback(request: Request):
             'identities': user.get('identities'),
         }
         
-        # Optionally store token for API calls
         request.session['token'] = {
             'access_token': token.get('access_token'),
             'token_type': token.get('token_type'),
             'expires_at': token.get('expires_at'),
         }
         
-        logger.info(f"User logged in: {user.get('email')}")
+        # ✅ CRITICAL: Force session to be saved
+        request.session.update(request.session)
         
-        # Redirect back to frontend
-        return RedirectResponse(url=f"{settings.FRONTEND_URL}/catalog")
+        logger.info(f"✅ Session saved for user: {user.get('email')}")
+        logger.info(f"Session ID: {request.session.get('_id', 'NO_ID')}")
+        
+        # ✅ Create response with explicit cookie setting
+        response = RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/catalog",
+            status_code=302
+        )
+        
+        return response
         
     except Exception as e:
         logger.error(f"Auth callback error: {e}", exc_info=True)
-        # Redirect to frontend with error
         return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?error=auth_failed")
 
 
 @router.get("/user")
-async def get_user_profile(request: Request):
+async def get_user_profile(request: Request, roles: dict = Depends(get_user_roles)):
     """
     Get current logged-in user's profile
     """
@@ -91,6 +100,7 @@ async def get_user_profile(request: Request):
             status_code=401,
             content={'error': 'Not authenticated'}
         )
+    roles: dict = Depends(get_user_roles)
     
     return {
         'user': {
@@ -99,7 +109,21 @@ async def get_user_profile(request: Request):
             'email': user.get('email'),
             'given_name': user.get('given_name'),
             'family_name': user.get('family_name'),
+            "roles": roles
         }
+    }
+
+@router.get("/me")
+async def get_current_user_info(
+    current_user: dict = Depends(get_current_active_user),
+    roles: dict = Depends(get_user_roles)
+):
+    """
+    Get current user information including BlueGroup-based roles
+    """
+    return {
+        "user": current_user,
+        "roles": roles
     }
 
 @router.post("/logout")
@@ -129,10 +153,9 @@ async def logout(request: Request):
         response.set_cookie(
             key="session",
             value="",
-            path="/",
             httponly=True,
             secure=True,
-            samesite="lax",
+            samesite="none",
             max_age=0,
             expires=0,
         )
@@ -164,10 +187,17 @@ async def validate_session(current_user: Dict = Depends(get_current_user)):
 
 @router.get("/check")
 async def check_auth(request: Request):
-    """
-    Check authentication status without requiring login
-    """
+    """Check authentication status without requiring login"""
+    
+    session_id = request.cookies.get('session', 'NO_COOKIE')
     user = request.session.get('user')
+    
+    logger.info(f"=== AUTH CHECK ===")
+    logger.info(f"Session Cookie: {session_id[:20]}..." if len(session_id) > 20 else session_id)
+    logger.info(f"Session Data: {dict(request.session)}")
+    logger.info(f"User in session: {user is not None}")
+    logger.info(f"==================")
+    
     if user:
         return {
             'authenticated': True,
@@ -181,3 +211,9 @@ async def check_auth(request: Request):
         'authenticated': False,
         'user': None
     }
+
+
+
+# roles = user.get("roles", [])
+# if any(r in roles for r in allowed_groups):
+#     return user

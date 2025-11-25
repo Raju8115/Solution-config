@@ -9,7 +9,7 @@ class Product(Base):
     __tablename__ = "products"
 
     product_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    brand_id = Column(UUID(as_uuid=True), ForeignKey("brands.brand_id"), nullable=False)
+    brand_id = Column(UUID(as_uuid=True), ForeignKey("brands.brand_id", ondelete="CASCADE"), nullable=False)
     product_name = Column(String(255), nullable=False)
     description = Column(Text)
 

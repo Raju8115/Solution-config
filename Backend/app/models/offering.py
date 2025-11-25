@@ -10,7 +10,7 @@ class Offering(Base):
     __tablename__ = "offerings"
 
     offering_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    product_id = Column(UUID(as_uuid=True), ForeignKey("products.product_id"), nullable=False)
+    product_id = Column(UUID(as_uuid=True), ForeignKey("products.product_id", ondelete="CASCADE"), nullable=False)
 
     offering_name = Column(String(255), nullable=False)
     saas_type = Column(String(100))
@@ -53,5 +53,10 @@ class Offering(Base):
 
     # Relationships
     product = relationship("Product", back_populates="offerings")
-    activities = relationship("OfferingActivity", back_populates="offering")
+    activities = relationship(
+        "OfferingActivity", 
+        back_populates="offering",
+        cascade="all, delete-orphan", 
+        passive_deletes=True 
+    )
     # staffing_details = relationship("StaffingDetail", back_populates="offering")

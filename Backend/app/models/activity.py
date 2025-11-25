@@ -11,8 +11,8 @@ class Activity(Base):
     
     activity_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     activity_name = Column(String(255), nullable=False)
-    brand = Column(String(150))
-    product_name = Column(String(255))
+    brand = Column(String(150)) #1
+    product_name = Column(String(255)) #1
     category = Column(String(100))
     part_numbers = Column(String(100))
     duration_weeks = Column(Integer)
@@ -32,9 +32,24 @@ class Activity(Base):
     updated_on = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    offerings = relationship("OfferingActivity", back_populates="activity")
-    staffing_details = relationship("StaffingDetail", back_populates="activity")
-    wbs_entries = relationship("ActivityWBS", back_populates="activity")
+    offerings = relationship(
+    "OfferingActivity", 
+    back_populates="activity",
+    cascade="all, delete-orphan",
+    passive_deletes=True
+    )
+    staffing_details = relationship(
+        "StaffingDetail", 
+        back_populates="activity",
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
+    wbs_entries = relationship(
+        "ActivityWBS", 
+        back_populates="activity",
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
 
 
 class OfferingActivity(Base):

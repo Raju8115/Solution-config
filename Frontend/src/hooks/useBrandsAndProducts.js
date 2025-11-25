@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import offeringService from '../services/offeringService';
+import productService from '../services/productService';
 
 export const useBrandsAndProducts = () => {
   const [brands, setBrands] = useState([]);
@@ -38,7 +39,7 @@ export const useBrandsAndProducts = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await offeringService.getProducts(brandId);
+      const data = await productService.getProductsByBrand(brandId);
       setProducts(data);
     } catch (err) {
       setError(err.message || 'Failed to fetch products');

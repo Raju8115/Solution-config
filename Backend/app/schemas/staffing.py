@@ -4,8 +4,7 @@ from uuid import UUID
 
 
 class StaffingDetailBase(BaseModel):
-    staffing_id: UUID
-    activity_id:UUID
+    activity_id: UUID
     country: Optional[str] = None
     role: Optional[str] = None
     band: Optional[int] = None
@@ -14,6 +13,15 @@ class StaffingDetailBase(BaseModel):
 
 class StaffingDetailCreate(StaffingDetailBase):
     pass
+
+
+class StaffingDetailUpdate(BaseModel):
+    """All fields optional for partial updates"""
+    activity_id: Optional[UUID] = None
+    country: Optional[str] = None
+    role: Optional[str] = None
+    band: Optional[int] = None
+    hours: Optional[int] = None
 
 
 class StaffingDetail(StaffingDetailBase):

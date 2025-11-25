@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     
     # Session
     SESSION_SECRET: str
+
+    # Groups
+    ADMIN_BLUEGROUP: str
+    SOLUTION_ARCHITECT_BLUEGROUP: str
     
     class Config:
         env_file = ".env"

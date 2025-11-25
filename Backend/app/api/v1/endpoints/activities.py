@@ -14,17 +14,19 @@ from app.schemas.activity import (
 from app.crud import activity as crud_activity
 from app.crud import offering as crud_offering
 from app.auth.dependencies import get_current_active_user
+from app.auth.permissions import require_admin, require_solution_architect
 
 router = APIRouter()
 
 # ==================== Activity Library Management ====================
+# READ operations - Available to all authenticated users (catalog access)
 
 @router.get("/library", response_model=List[Activity])
 async def get_activity_library(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(get_current_active_user)  # All authenticated users
 ):
     """
     Get all activities in the library (not filtered by offering)
@@ -36,7 +38,7 @@ async def get_activity_library(
 @router.get("/library/unassigned", response_model=List[Activity])
 async def get_unassigned_activities(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(get_current_active_user)  # All authenticated users
 ):
     """Get activities that are not assigned to any offering"""
     activities = crud_activity.get_unassigned_activities(db)
@@ -46,7 +48,7 @@ async def get_unassigned_activities(
 async def get_activity_detail(
     activity_id: str,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(get_current_active_user)  # All authenticated users
 ):
     """Get a single activity with all offerings using it"""
     activity = crud_activity.get_activity_by_id(db, activity_id)
@@ -59,6 +61,8 @@ async def get_activity_detail(
     activity_dict = {
         "activity_id": activity.activity_id,
         "activity_name": activity.activity_name,
+        "brand": activity.brand,
+        "product_name": activity.product_name,
         "category": activity.category,
         "part_numbers": activity.part_numbers,
         "duration_weeks": activity.duration_weeks,
@@ -81,54 +85,11 @@ async def get_activity_detail(
     
     return activity_dict
 
-@router.post("/library", response_model=Activity, status_code=status.HTTP_201_CREATED)
-async def create_activity(
-    activity: ActivityCreate,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)
-):
-    """
-    Create a new activity in the library (not associated with any offering yet)
-    This activity can later be linked to one or more offerings
-    """
-    new_activity = crud_activity.create_activity(db, activity)
-    return new_activity
-
-@router.put("/library/{activity_id}", response_model=Activity)
-async def update_activity(
-    activity_id: str,
-    activity_update: ActivityUpdate,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)
-):
-    """Update an existing activity"""
-    updated_activity = crud_activity.update_activity(db, activity_id, activity_update)
-    if not updated_activity:
-        raise HTTPException(status_code=404, detail="Activity not found")
-    return updated_activity
-
-@router.delete("/library/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_activity(
-    activity_id: str,
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)
-):
-    """
-    Delete an activity from the library
-    This will also remove it from all offerings (CASCADE)
-    """
-    success = crud_activity.delete_activity(db, activity_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Activity not found")
-    return None
-
-# ==================== Offering-Specific Activities ====================
-
 @router.get("/activities", response_model=List[ActivityWithRelation])
 async def get_activities_for_offering(
     offering_id: str = Query(..., description="Offering ID to get activities for"),
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(get_current_active_user)  # All authenticated users
 ):
     """
     Get all activities for a specific offering
@@ -142,17 +103,66 @@ async def get_activities_for_offering(
     activities = crud_activity.get_activities_by_offering(db, offering_id)
     return activities
 
-# ==================== Link/Unlink Activities to Offerings ====================
+# ==================== ADMIN ONLY - Modify Activity Library ====================
+
+@router.post("/library", response_model=Activity, status_code=status.HTTP_201_CREATED)
+async def create_activity(
+    activity: ActivityCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_admin)  # ADMIN ONLY
+):
+    """
+    Create a new activity in the library (not associated with any offering yet)
+    This activity can later be linked to one or more offerings
+    **Requires Administrator access**
+    """
+    new_activity = crud_activity.create_activity(db, activity)
+    return new_activity
+
+@router.put("/library/{activity_id}", response_model=Activity)
+async def update_activity(
+    activity_id: str,
+    activity_update: ActivityUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_admin)  # ADMIN ONLY
+):
+    """
+    Update an existing activity
+    **Requires Administrator access**
+    """
+    updated_activity = crud_activity.update_activity(db, activity_id, activity_update)
+    if not updated_activity:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    return updated_activity
+
+@router.delete("/library/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_activity(
+    activity_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_admin)  # ADMIN ONLY
+):
+    """
+    Delete an activity from the library
+    This will also remove it from all offerings (CASCADE)
+    **Requires Administrator access**
+    """
+    success = crud_activity.delete_activity(db, activity_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    return None
+
+# ==================== SOLUTION ARCHITECT - Link/Unlink Activities ====================
 
 @router.post("/link", status_code=status.HTTP_201_CREATED)
 async def link_activity_to_offering(
     link_data: OfferingActivityCreate,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_solution_architect)  # SOLUTION ARCHITECT
 ):
     """
     Link an existing activity to an offering
     Allows reusing activities across multiple offerings
+    **Requires Solution Architect access**
     """
     # Verify offering exists
     offering = crud_offering.get_offering_by_id(db, link_data.offering_id)
@@ -186,9 +196,12 @@ async def unlink_activity_from_offering(
     offering_id: str = Query(..., description="Offering ID"),
     activity_id: str = Query(..., description="Activity ID"),
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_solution_architect)  # SOLUTION ARCHITECT
 ):
-    """Remove an activity from an offering (doesn't delete the activity itself)"""
+    """
+    Remove an activity from an offering (doesn't delete the activity itself)
+    **Requires Solution Architect access**
+    """
     success = crud_activity.unlink_activity_from_offering(db, offering_id, activity_id)
     if not success:
         raise HTTPException(
@@ -203,9 +216,12 @@ async def update_activity_sequence_in_offering(
     activity_id: str = Query(..., description="Activity ID"),
     update_data: OfferingActivityUpdate = None,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_solution_architect)  # SOLUTION ARCHITECT
 ):
-    """Update sequence and mandatory flag for an activity in a specific offering"""
+    """
+    Update sequence and mandatory flag for an activity in a specific offering
+    **Requires Solution Architect access**
+    """
     updated_link = crud_activity.update_activity_sequence(
         db,
         offering_id,
