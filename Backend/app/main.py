@@ -62,7 +62,13 @@ oauth.register(
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 from fastapi.staticfiles import StaticFiles
-app.mount("/", StaticFiles(directory="frontend/build", html=True), name="frontend")
+app.mount("/static", StaticFiles(directory="frontend/build/static"), name="static")
+
+# --- React SPA fallback ---
+@app.get("/{path_name:path}")
+async def spa_fallback(path_name: str):
+    return FileResponse(os.path.join("frontend", "build", "index.html"))
+
 
 @app.on_event("startup")
 async def startup_event():
