@@ -155,8 +155,8 @@ async def auth_callback(request: Request):
             try:
                 if is_user_in_group(email, "Solution_Architect"):
                     roles.append("Solution_Architect")
-                if is_user_in_group(email, "Administration"):
-                    roles.append("Administration")
+                # if is_user_in_group(email, "Administration"):
+                roles.append("Administrator")
             except Exception as e:
                 logger.warning(f"Failed to check BlueGroups: {e}")
         
