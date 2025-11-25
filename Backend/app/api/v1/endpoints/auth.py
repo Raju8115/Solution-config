@@ -152,7 +152,7 @@ async def logout(request: Request):
         # Delete session cookie
         response.set_cookie(
             key="session",
-            value="",
+            value="session_id",
             httponly=True,
             secure=True,
             samesite="none",
