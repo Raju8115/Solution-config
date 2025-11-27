@@ -23,12 +23,15 @@ def get_activities_by_offering(db: Session, offering_id: str) -> List[dict]:
         activity_dict = {
             "activity_id": activity.activity_id,
             "activity_name": activity.activity_name,
-            "brand": activity.brand,
-            "product_name": activity.product_name,
+            "offering_id": activity.offering_id,
+            "brand_id": activity.brand_id,
+            "product_id": activity.product_id,
             "category": activity.category,
             "part_numbers": activity.part_numbers,
             "duration_weeks": activity.duration_weeks,
             "duration_hours": activity.duration_hours,
+            "sequence": activity.sequence,
+            "is_mandatory": activity.is_mandatory,
             "outcome": activity.outcome,
             "description": activity.description,
             "effort_hours": activity.effort_hours,
@@ -38,13 +41,11 @@ def get_activities_by_offering(db: Session, offering_id: str) -> List[dict]:
             "assumptions": activity.assumptions,
             "deliverables": activity.deliverables,
             "completion_criteria": activity.completion_criteria,
-            "wbs": activity.wbs,
-            "week": activity.week,
             "created_on": activity.created_on,
             "updated_on": activity.updated_on,
-            # Offering-specific fields from junction table
-            "sequence": offering_activity.sequence,
-            "is_mandatory": offering_activity.is_mandatory
+            # Offering-specific fields from junction table (for backward compatibility)
+            "junction_sequence": offering_activity.sequence,
+            "junction_is_mandatory": offering_activity.is_mandatory
         }
         activities.append(activity_dict)
     

@@ -13,7 +13,7 @@ from app.models.offering import Offering
 from app.models.country import Country
 from app.models.activity import Activity
 from app.models.pricing import PricingDetail
-from app.models.staffing import StaffingDetail
+from app.models.staffing import Staffing
 from app.models.wbs import WBS
 
 router = APIRouter()
@@ -37,8 +37,8 @@ async def get_admin_stats(
             "totalOfferings": db.query(func.count(Offering.offering_id)).scalar() or 0,
             "totalCountries": db.query(func.count(Country.country_id)).scalar() or 0,
             "totalActivities": db.query(func.count(Activity.activity_id)).scalar() or 0,
-            "totalPricing": db.query(func.count(PricingDetail.country)).scalar() or 0,
-            "totalStaffing": db.query(func.count(StaffingDetail.staffing_id)).scalar() or 0,
+            "totalPricing": db.query(func.count(PricingDetail.pricing_id)).scalar() or 0,
+            "totalStaffing": db.query(func.count(Staffing.staffing_id)).scalar() or 0,
             "totalWBS": db.query(func.count(WBS.wbs_id)).scalar() or 0,
         }
         
@@ -69,7 +69,7 @@ async def get_detailed_admin_stats(
         total_countries = db.query(func.count(Country.country_id)).scalar() or 0
         total_activities = db.query(func.count(Activity.activity_id)).scalar() or 0
         total_pricing = db.query(func.count(PricingDetail.country)).scalar() or 0
-        total_staffing = db.query(func.count(StaffingDetail.staffing_id)).scalar() or 0
+        total_staffing = db.query(func.count(Staffing.staffing_id)).scalar() or 0
         total_wbs = db.query(func.count(WBS.wbs_id)).scalar() or 0
         
         # Additional breakdowns (customize based on your models)

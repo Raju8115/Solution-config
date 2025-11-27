@@ -6,12 +6,15 @@ from uuid import UUID
 
 class ActivityBase(BaseModel):
     activity_name: str
-    brand: Optional[str] = None
-    product_name: Optional[str] = None
+    offering_id: Optional[UUID] = None
+    brand_id: Optional[UUID] = None
+    product_id: Optional[UUID] = None
     category: Optional[str] = None
     part_numbers: Optional[str] = None
     duration_weeks: Optional[int] = None
     duration_hours: Optional[int] = None
+    sequence: Optional[int] = None
+    is_mandatory: Optional[bool] = True
     outcome: Optional[str] = None
     description: Optional[str] = None
     effort_hours: Optional[int] = None
@@ -21,8 +24,6 @@ class ActivityBase(BaseModel):
     assumptions: Optional[str] = None
     deliverables: Optional[str] = None
     completion_criteria: Optional[str] = None
-    wbs: Optional[str] = None
-    week: Optional[int] = None
 
 class ActivityCreate(ActivityBase):
     """Schema for creating a new activity (standalone)"""
@@ -31,12 +32,15 @@ class ActivityCreate(ActivityBase):
 class ActivityUpdate(BaseModel):
     """Schema for updating an activity (all fields optional)"""
     activity_name: Optional[str] = None
-    brand: Optional[str] = None
-    product_name: Optional[str] = None
+    offering_id: Optional[UUID] = None
+    brand_id: Optional[UUID] = None
+    product_id: Optional[UUID] = None
     category: Optional[str] = None
     part_numbers: Optional[str] = None
     duration_weeks: Optional[int] = None
     duration_hours: Optional[int] = None
+    sequence: Optional[int] = None
+    is_mandatory: Optional[bool] = None
     outcome: Optional[str] = None
     description: Optional[str] = None
     effort_hours: Optional[int] = None
@@ -46,8 +50,6 @@ class ActivityUpdate(BaseModel):
     assumptions: Optional[str] = None
     deliverables: Optional[str] = None
     completion_criteria: Optional[str] = None
-    wbs: Optional[str] = None
-    week: Optional[int] = None
 
 class Activity(ActivityBase):
     """Schema for activity response"""

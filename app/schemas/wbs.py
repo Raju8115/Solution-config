@@ -35,3 +35,22 @@ class ActivityWBSResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class WBSStaffingCreate(BaseModel):
+    wbs_id: UUID
+    staffing_id: UUID
+    hours: Optional[int] = None
+
+
+class WBSStaffingUpdate(BaseModel):
+    hours: Optional[int] = None
+
+
+class WBSStaffingResponse(BaseModel):
+    wbs_id: UUID
+    staffing_id: UUID
+    hours: Optional[int] = None
+
+    class Config:
+        from_attributes = True

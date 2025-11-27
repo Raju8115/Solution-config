@@ -54,9 +54,9 @@ class Offering(Base):
     # Relationships
     product = relationship("Product", back_populates="offerings")
     activities = relationship(
-        "OfferingActivity", 
+        "OfferingActivity",
         back_populates="offering",
-        cascade="all, delete-orphan", 
-        passive_deletes=True 
+        cascade="all, delete-orphan",
+        passive_deletes=True
     )
-    # staffing_details = relationship("StaffingDetail", back_populates="offering")
+    activities_direct = relationship("Activity", back_populates="offering", cascade="all, delete-orphan", passive_deletes=True)

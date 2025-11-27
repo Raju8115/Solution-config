@@ -1,12 +1,11 @@
 from pydantic import BaseModel
 from typing import Optional
 from decimal import Decimal
+from uuid import UUID
 
 
 class PricingDetailBase(BaseModel):
-    country: str
-    role: str
-    band: int
+    staffing_id: UUID
     cost: Optional[Decimal] = None
     sale_price: Optional[Decimal] = None
 
@@ -17,14 +16,13 @@ class PricingDetailCreate(PricingDetailBase):
 
 class PricingDetailUpdate(BaseModel):
     """All fields optional for partial updates"""
-    country: Optional[str] = None
-    role: Optional[str] = None
-    band: Optional[int] = None
+    staffing_id: Optional[UUID] = None
     cost: Optional[Decimal] = None
     sale_price: Optional[Decimal] = None
 
 
 class PricingDetail(PricingDetailBase):
+    pricing_id: UUID
 
     class Config:
         from_attributes = True

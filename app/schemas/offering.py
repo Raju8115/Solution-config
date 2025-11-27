@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from app.schemas.activity import ActivityWithRelation
@@ -40,6 +41,7 @@ class OfferingBase(BaseModel):
     prerequisites: Optional[str] = None
     seismic_link: Optional[str] = None
     part_numbers: Optional[str] = None
+    sale_price: Optional[Decimal] = None
 
 class OfferingCreate(OfferingBase):
     product_id: UUID
@@ -81,6 +83,7 @@ class OfferingUpdate(BaseModel):
     prerequisites: Optional[str] = None
     seismic_link: Optional[str] = None
     part_numbers: Optional[str] = None
+    sale_price: Optional[Decimal] = None
     product_id: Optional[UUID] = None
 
 

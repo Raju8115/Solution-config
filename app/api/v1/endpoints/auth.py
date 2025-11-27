@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Request, HTTPException, Depends, Response
 from fastapi.responses import RedirectResponse, JSONResponse
 from typing import Dict
 import logging
@@ -49,45 +49,60 @@ async def auth_callback(request: Request):
         # Get user info from ID token or userinfo endpoint
         try:
             user = await oauth.appid.parse_id_token(request, token)
-            email = user.get("email")
-            roles = []
-            if is_user_in_group(email, "Solution_Architect"):
-                roles.append("Solution_Architect")
-            if is_user_in_group(email, "Administration"):
-                roles.append("Administration")
             logger.info("ID token parsed successfully")
         except Exception as e:
             logger.warning(f"Failed to parse ID token, using userinfo endpoint: {e}")
             user = await oauth.appid.userinfo(token=token)
         
-        # Store user info in session
+        email = user.get("email")
+        
+        # Check roles
+        roles = []
+        is_admin = False
+        is_solution_architect = False
+        
+        if is_user_in_group(email, "Solution_Architect"):
+            roles.append("Solution_Architect")
+            is_solution_architect = True
+            
+        if is_user_in_group(email, "Administration"):
+            roles.append("Administration")
+            is_admin = True
+        
+        # Store user info in session with roles
         request.session['user'] = {
             'sub': user.get('sub'),
             'name': user.get('name') or f"{user.get('given_name', '')} {user.get('family_name', '')}".strip(),
-            'email': user.get('email'),
+            'email': email,
             'given_name': user.get('given_name'),
             'family_name': user.get('family_name'),
             'identities': user.get('identities'),
         }
         
-        # Optionally store token for API calls
+        # Store roles separately for easy access
+        request.session['roles'] = {
+            'is_admin': is_admin,
+            'is_solution_architect': is_solution_architect,
+            'has_catalog_access': True,
+            'roles': roles
+        }
+        
+        # Store token for API calls
         request.session['token'] = {
             'access_token': token.get('access_token'),
             'token_type': token.get('token_type'),
             'expires_at': token.get('expires_at'),
         }
-
-        print("My access token ",token.get('access_token'))
         
-        logger.info(f"User logged in: {user.get('email')}")
+        logger.info(f"User logged in: {email} with roles: {roles}")
         
-        # Redirect back to frontend
-        return RedirectResponse(url=f"{settings.FRONTEND_URL}/catalog")
+        # ✅ Use RELATIVE URL for same-origin redirect
+        return RedirectResponse(url="/catalog", status_code=302)
         
     except Exception as e:
         logger.error(f"Auth callback error: {e}", exc_info=True)
-        # Redirect to frontend with error
-        return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?error=auth_failed")
+        # ✅ Use RELATIVE URL for error redirect too
+        return RedirectResponse(url="/login?error=auth_failed", status_code=302)
 
 
 @router.get("/user")
@@ -188,24 +203,40 @@ async def validate_session(current_user: Dict = Depends(get_current_user)):
 
 
 @router.get("/check")
-async def check_auth(request: Request):
-    """
-    Check authentication status without requiring login
-    """
+async def check_auth(request: Request, response: Response):
     user = request.session.get('user')
+    roles = request.session.get('roles', {
+        'is_admin': False,
+        'is_solution_architect': False,
+        'has_catalog_access': True
+    })
+    
     if user:
+        # ✅ Force set cookie on every response for Safari
+        session_cookie = request.cookies.get("session")
+        if session_cookie:
+            response.set_cookie(
+                key="session",
+                value=session_cookie,
+                max_age=3600 * 24,
+                httponly=True,
+                samesite="lax",
+                secure=False,
+                path="/"
+            )
+        
         return {
-            'authenticated': True,
-            'user': {
-                'email': user.get('email'),
-                'name': user.get('name')
-            }
+            "authenticated": True,
+            "user": user,
+            "roles": roles
         }
     
-    return {
-        'authenticated': False,
-        'user': None
-    }
+    return JSONResponse(
+        status_code=401,
+        content={"authenticated": False}
+    )
+
+
 
 
 # roles = user.get("roles", [])

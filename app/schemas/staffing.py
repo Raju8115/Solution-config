@@ -3,28 +3,24 @@ from typing import Optional
 from uuid import UUID
 
 
-class StaffingDetailBase(BaseModel):
-    activity_id: UUID
-    country: Optional[str] = None
-    role: Optional[str] = None
-    band: Optional[int] = None
-    hours: Optional[int] = None
+class StaffingBase(BaseModel):
+    country: str
+    role: str
+    band: int
 
 
-class StaffingDetailCreate(StaffingDetailBase):
+class StaffingCreate(StaffingBase):
     pass
 
 
-class StaffingDetailUpdate(BaseModel):
+class StaffingUpdate(BaseModel):
     """All fields optional for partial updates"""
-    activity_id: Optional[UUID] = None
     country: Optional[str] = None
     role: Optional[str] = None
     band: Optional[int] = None
-    hours: Optional[int] = None
 
 
-class StaffingDetail(StaffingDetailBase):
+class Staffing(StaffingBase):
     staffing_id: UUID
 
     class Config:

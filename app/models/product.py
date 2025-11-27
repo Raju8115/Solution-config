@@ -16,3 +16,4 @@ class Product(Base):
     # Relationships
     brand = relationship("Brand", back_populates="products")
     offerings = relationship("Offering", back_populates="product", cascade="all, delete-orphan")
+    activities = relationship("Activity", back_populates="product", cascade="all, delete-orphan")

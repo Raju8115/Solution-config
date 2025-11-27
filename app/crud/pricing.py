@@ -2,39 +2,17 @@ from sqlalchemy.orm import Session
 from app.models.pricing import PricingDetail
 from app.schemas.pricing import PricingDetailCreate, PricingDetailUpdate
 from typing import Optional, List
+import uuid
 
 
-def get_pricing_details(
-    db: Session,
-    country: str,
-    role: str,
-    band: int
-) -> Optional[PricingDetail]:
-    """Get pricing details for a specific country, role, and band"""
-    return db.query(PricingDetail).filter(
-        PricingDetail.country == country,
-        PricingDetail.role == role,
-        PricingDetail.band == band
-    ).first()
+def get_pricing_by_id(db: Session, pricing_id: str) -> Optional[PricingDetail]:
+    """Get pricing detail by ID"""
+    return db.query(PricingDetail).filter(PricingDetail.pricing_id == pricing_id).first()
 
 
-def search_pricing(
-    db: Session,
-    country: Optional[str] = None,
-    role: Optional[str] = None,
-    band: Optional[int] = None
-) -> List[PricingDetail]:
-    """Search pricing details with optional filters"""
-    query = db.query(PricingDetail)
-    
-    if country:
-        query = query.filter(PricingDetail.country == country)
-    if role:
-        query = query.filter(PricingDetail.role == role)
-    if band:
-        query = query.filter(PricingDetail.band == band)
-    
-    return query.all()
+def get_pricing_by_staffing_id(db: Session, staffing_id: str) -> Optional[PricingDetail]:
+    """Get pricing details for a specific staffing_id"""
+    return db.query(PricingDetail).filter(PricingDetail.staffing_id == staffing_id).first()
 
 
 def get_all_pricing(db: Session) -> List[PricingDetail]:
@@ -45,9 +23,8 @@ def get_all_pricing(db: Session) -> List[PricingDetail]:
 def create_pricing(db: Session, pricing: PricingDetailCreate) -> PricingDetail:
     """Create a new pricing detail"""
     db_pricing = PricingDetail(
-        country=pricing.country,
-        role=pricing.role,
-        band=pricing.band,
+        pricing_id=uuid.uuid4(),
+        staffing_id=pricing.staffing_id,
         cost=pricing.cost,
         sale_price=pricing.sale_price
     )
@@ -59,16 +36,12 @@ def create_pricing(db: Session, pricing: PricingDetailCreate) -> PricingDetail:
 
 def update_pricing(
     db: Session,
-    country: str,
-    role: str,
-    band: int,
+    pricing_id: str,
     pricing: PricingDetailUpdate
 ) -> Optional[PricingDetail]:
     """Update an existing pricing detail"""
     db_pricing = db.query(PricingDetail).filter(
-        PricingDetail.country == country,
-        PricingDetail.role == role,
-        PricingDetail.band == band
+        PricingDetail.pricing_id == pricing_id
     ).first()
     
     if not db_pricing:
@@ -83,17 +56,10 @@ def update_pricing(
     return db_pricing
 
 
-def delete_pricing(
-    db: Session,
-    country: str,
-    role: str,
-    band: int
-) -> bool:
+def delete_pricing(db: Session, pricing_id: str) -> bool:
     """Delete a pricing detail"""
     db_pricing = db.query(PricingDetail).filter(
-        PricingDetail.country == country,
-        PricingDetail.role == role,
-        PricingDetail.band == band
+        PricingDetail.pricing_id == pricing_id
     ).first()
     
     if not db_pricing:
